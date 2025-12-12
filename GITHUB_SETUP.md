@@ -20,6 +20,10 @@ Your project is now ready for GitHub! Here's what has been prepared:
    - Environment variable configuration
    - Quick start guide
 
+4. **`GIT_BEST_PRACTICES.md`** - Comprehensive guide on avoiding Git issues
+
+5. **`GIT_QUICK_REFERENCE.md`** - Quick reference card for common Git operations
+
 ## 📝 Before You Push to GitHub
 
 ### 1. Create Environment Variables File
