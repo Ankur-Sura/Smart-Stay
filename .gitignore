@@ -172,6 +172,20 @@ public/uploads/
 temp/
 
 # =============================================================================
+#                     PROJECT SPECIFIC
+# =============================================================================
+
+# Startup script
+start.sh
+
+# Documentation files (keep only README.md)
+GITHUB_SETUP.md
+GIT_BEST_PRACTICES.md
+GIT_QUICK_REFERENCE.md
+PUSH_INSTRUCTIONS.md
+push-to-github.sh
+
+# =============================================================================
 #                     MISC
 # =============================================================================
 
