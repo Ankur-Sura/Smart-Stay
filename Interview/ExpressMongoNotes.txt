@@ -1,0 +1,585 @@
+===================================================================================
+                    🟢 EXPRESS.JS & MONGODB - COMPLETE GUIDE
+===================================================================================
+
+                        For Smart Stay Project
+                        Main Backend Service
+
+===================================================================================
+                         CHAPTER 1: EXPRESS.JS BASICS
+===================================================================================
+
+WHAT IS EXPRESS?
+---------------
+Express is a minimal, flexible Node.js web framework.
+It provides the foundation for web applications and APIs.
+
+KEY FEATURES:
+------------
+1. Routing: Define URL handlers
+2. Middleware: Functions that process requests
+3. Static files: Serve CSS, JS, images
+4. Templates: Render dynamic HTML
+5. Easy integration: Works with any database
+
+BASIC EXPRESS APP:
+-----------------
+    const express = require("express");
+    const app = express();
+    
+    // Route handler
+    app.get("/", (req, res) => {
+        res.send("Hello World!");
+    });
+    
+    // Start server
+    app.listen(8080, () => {
+        console.log("Server running on port 8080");
+    });
+
+===================================================================================
+                         CHAPTER 2: MIDDLEWARE
+===================================================================================
+
+WHAT IS MIDDLEWARE?
+------------------
+Functions that have access to:
+- req (request object)
+- res (response object)
+- next (function to call next middleware)
+
+FLOW:
+-----
+Request → Middleware 1 → Middleware 2 → Route Handler → Response
+
+BUILT-IN MIDDLEWARE:
+-------------------
+    // Parse JSON bodies
+    app.use(express.json());
+    
+    // Parse form data (URL encoded)
+    app.use(express.urlencoded({ extended: true }));
+    
+    // Serve static files
+    app.use(express.static("public"));
+
+
+CUSTOM MIDDLEWARE:
+-----------------
+    // Logging middleware
+    app.use((req, res, next) => {
+        console.log(`${req.method} ${req.path}`);
+        next();  // IMPORTANT: Call next() to continue
+    });
+
+
+METHOD-OVERRIDE:
+---------------
+HTML forms only support GET and POST.
+method-override enables PUT and DELETE:
+
+    const methodOverride = require("method-override");
+    app.use(methodOverride("_method"));
+    
+    <!-- In HTML form -->
+    <form action="/listings/123?_method=DELETE" method="POST">
+        <button>Delete</button>
+    </form>
+
+===================================================================================
+                         CHAPTER 3: ROUTING
+===================================================================================
+
+BASIC ROUTES:
+------------
+    // GET - Retrieve data
+    app.get("/listings", (req, res) => {
+        res.send("All listings");
+    });
+    
+    // POST - Create data
+    app.post("/listings", (req, res) => {
+        res.send("Create listing");
+    });
+    
+    // PUT - Update data
+    app.put("/listings/:id", (req, res) => {
+        res.send(`Update listing ${req.params.id}`);
+    });
+    
+    // DELETE - Remove data
+    app.delete("/listings/:id", (req, res) => {
+        res.send(`Delete listing ${req.params.id}`);
+    });
+
+
+ROUTE PARAMETERS:
+----------------
+    // :id is a parameter
+    app.get("/listings/:id", (req, res) => {
+        const id = req.params.id;  // Extract from URL
+        res.send(`Listing ${id}`);
+    });
+    
+    // Multiple parameters
+    app.get("/users/:userId/reviews/:reviewId", (req, res) => {
+        const { userId, reviewId } = req.params;
+        res.send(`User ${userId}, Review ${reviewId}`);
+    });
+
+
+QUERY PARAMETERS:
+----------------
+    // GET /search?location=Goa&maxPrice=5000
+    app.get("/search", (req, res) => {
+        const location = req.query.location;  // "Goa"
+        const maxPrice = req.query.maxPrice;  // "5000"
+        res.send(`Searching in ${location}`);
+    });
+
+
+EXPRESS ROUTER:
+--------------
+Organize routes into separate files:
+
+    // routes/ai.js
+    const express = require("express");
+    const router = express.Router();
+    
+    router.post("/travel/plan", (req, res) => {
+        // Handle travel planning
+    });
+    
+    module.exports = router;
+    
+    // app.js
+    const aiRoutes = require("./routes/ai.js");
+    app.use("/api", aiRoutes);  // All routes prefixed with /api
+
+===================================================================================
+                         CHAPTER 4: EJS TEMPLATING
+===================================================================================
+
+WHAT IS EJS?
+-----------
+Embedded JavaScript - lets you embed JS in HTML.
+
+SETUP:
+-----
+    app.set("view engine", "ejs");
+    app.set("views", path.join(__dirname, "views"));
+
+SYNTAX:
+------
+    <% %>   → Execute JavaScript (no output)
+    <%= %>  → Output value (escaped)
+    <%- %>  → Output value (unescaped HTML)
+
+EXAMPLE:
+-------
+    <!-- views/listings/index.ejs -->
+    <h1>All Listings</h1>
+    
+    <% if (allListings.length === 0) { %>
+        <p>No listings found</p>
+    <% } else { %>
+        <% for (let listing of allListings) { %>
+            <div class="card">
+                <h2><%= listing.title %></h2>
+                <p><%= listing.description %></p>
+                <p>₹<%= listing.price.toLocaleString("en-IN") %></p>
+            </div>
+        <% } %>
+    <% } %>
+
+
+RENDERING:
+---------
+    app.get("/listings", async (req, res) => {
+        const allListings = await Listing.find({});
+        res.render("listings/index", { allListings });
+    });
+
+
+EJS-MATE FOR LAYOUTS:
+--------------------
+Instead of repeating HTML structure:
+
+    // Setup
+    const ejsMate = require("ejs-mate");
+    app.engine("ejs", ejsMate);
+    
+    <!-- views/layouts/boilerplate.ejs -->
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Smart Stay</title>
+        <link rel="stylesheet" href="/css/style.css">
+    </head>
+    <body>
+        <%- include("../includes/navbar") %>
+        <main class="container">
+            <%- body %>
+        </main>
+        <%- include("../includes/footer") %>
+    </body>
+    </html>
+    
+    <!-- views/listings/index.ejs -->
+    <% layout("layouts/boilerplate") %>
+    <h1>All Listings</h1>
+    <!-- This becomes <%- body %> in layout -->
+
+
+PARTIALS (INCLUDES):
+-------------------
+    <%- include("../includes/navbar") %>
+    <%- include("../includes/footer") %>
+
+===================================================================================
+                         CHAPTER 5: MONGODB BASICS
+===================================================================================
+
+WHAT IS MONGODB?
+---------------
+MongoDB is a NoSQL document database.
+Stores data as JSON-like documents (BSON).
+
+WHY MONGODB?
+-----------
+1. Flexible schema - no fixed structure
+2. JSON-like documents - natural for JavaScript
+3. Scalable - horizontal scaling
+4. Fast - for read-heavy workloads
+
+MONGODB STRUCTURE:
+-----------------
+    Database (smartstay)
+        └── Collection (listings)
+                └── Documents (individual hotels)
+
+DOCUMENT EXAMPLE:
+----------------
+    {
+        "_id": ObjectId("..."),
+        "title": "Beach Villa",
+        "description": "Beautiful villa near beach",
+        "price": 5000,
+        "location": "Goa",
+        "country": "India",
+        "amenities": ["WiFi", "Pool", "AC"]
+    }
+
+===================================================================================
+                         CHAPTER 6: MONGOOSE ODM
+===================================================================================
+
+WHAT IS MONGOOSE?
+----------------
+Object Document Mapper (ODM) for MongoDB.
+Provides schema validation, middleware, and helper methods.
+
+CONNECTING:
+----------
+    const mongoose = require("mongoose");
+    
+    async function main() {
+        await mongoose.connect("mongodb://127.0.0.1:27017/smartstay");
+    }
+    
+    main()
+        .then(() => console.log("Connected to DB"))
+        .catch(err => console.log(err));
+
+
+DEFINING SCHEMA:
+---------------
+    const mongoose = require("mongoose");
+    const Schema = mongoose.Schema;
+    
+    const listingSchema = new Schema({
+        title: {
+            type: String,
+            required: true          // Validation
+        },
+        description: String,
+        image: {
+            type: String,
+            default: "https://...",  // Default value
+            set: (v) => v === "" ? defaultImage : v  // Setter
+        },
+        price: Number,
+        location: String,
+        country: String,
+        amenities: {
+            type: [String],         // Array of strings
+            default: []
+        }
+    });
+
+
+CREATING MODEL:
+--------------
+    const Listing = mongoose.model("Listing", listingSchema);
+    module.exports = Listing;
+
+    // "Listing" → MongoDB collection "listings" (lowercase, plural)
+
+===================================================================================
+                         CHAPTER 7: CRUD OPERATIONS
+===================================================================================
+
+CREATE:
+------
+    // POST /listings
+    app.post("/listings", async (req, res) => {
+        const newListing = new Listing(req.body.listing);
+        await newListing.save();
+        res.redirect("/listings");
+    });
+
+
+READ (ALL):
+----------
+    // GET /listings
+    app.get("/listings", async (req, res) => {
+        const allListings = await Listing.find({});
+        res.render("listings/index", { allListings });
+    });
+
+
+READ (ONE):
+----------
+    // GET /listings/:id
+    app.get("/listings/:id", async (req, res) => {
+        const listing = await Listing.findById(req.params.id);
+        res.render("listings/show", { listing });
+    });
+
+
+UPDATE:
+------
+    // PUT /listings/:id
+    app.put("/listings/:id", async (req, res) => {
+        const { id } = req.params;
+        await Listing.findByIdAndUpdate(id, { ...req.body.listing });
+        res.redirect(`/listings/${id}`);
+    });
+
+
+DELETE:
+------
+    // DELETE /listings/:id
+    app.delete("/listings/:id", async (req, res) => {
+        const { id } = req.params;
+        await Listing.findByIdAndDelete(id);
+        res.redirect("/listings");
+    });
+
+
+QUERY METHODS:
+-------------
+    // Find all
+    Listing.find({})
+    
+    // Find with filter
+    Listing.find({ location: "Goa" })
+    
+    // Find one by ID
+    Listing.findById(id)
+    
+    // Find and update
+    Listing.findByIdAndUpdate(id, updates)
+    
+    // Find and delete
+    Listing.findByIdAndDelete(id)
+    
+    // Count
+    Listing.countDocuments({})
+    
+    // Sort and limit
+    Listing.find({}).sort({ price: 1 }).limit(10)
+
+===================================================================================
+                         CHAPTER 8: IN SMART STAY
+===================================================================================
+
+APP.JS STRUCTURE:
+----------------
+    // 1. IMPORTS
+    const express = require("express");
+    const mongoose = require("mongoose");
+    const path = require("path");
+    const methodOverride = require("method-override");
+    const ejsMate = require("ejs-mate");
+    
+    const app = express();
+    const Listing = require("./models/listing.js");
+    
+    // 2. DATABASE CONNECTION
+    const MONGO_URL = "mongodb://127.0.0.1:27017/smartstay";
+    
+    async function main() {
+        await mongoose.connect(MONGO_URL);
+    }
+    main().then(() => console.log("Connected to DB"));
+    
+    // 3. MIDDLEWARE
+    app.engine("ejs", ejsMate);
+    app.set("view engine", "ejs");
+    app.set("views", path.join(__dirname, "views"));
+    app.use(express.urlencoded({ extended: true }));
+    app.use(express.json());
+    app.use(methodOverride("_method"));
+    app.use(express.static(path.join(__dirname, "public")));
+    
+    // 4. ROUTES
+    const aiRoutes = require("./routes/ai.js");
+    app.use("/api", aiRoutes);
+    
+    app.get("/", (req, res) => res.redirect("/listings"));
+    app.get("/listings", async (req, res) => {...});
+    app.get("/listings/new", (req, res) => {...});
+    app.get("/listings/:id", async (req, res) => {...});
+    app.post("/listings", async (req, res) => {...});
+    app.put("/listings/:id", async (req, res) => {...});
+    app.delete("/listings/:id", async (req, res) => {...});
+    
+    // AI PAGES
+    app.get("/ai", (req, res) => res.render("ai/index"));
+    app.get("/ai/travel-chat", (req, res) => res.render("ai/travel-chat"));
+    app.get("/ai/solo-planner", (req, res) => res.render("ai/solo-planner"));
+    
+    // 5. START SERVER
+    app.listen(8080, () => console.log("Server listening on 8080"));
+
+
+FOLDER STRUCTURE:
+----------------
+    Smart Stay/
+    ├── app.js              # Main server
+    ├── models/
+    │   └── listing.js      # Mongoose schema
+    ├── routes/
+    │   └── ai.js           # AI API routes
+    ├── views/
+    │   ├── layouts/
+    │   │   └── boilerplate.ejs
+    │   ├── includes/
+    │   │   ├── navbar.ejs
+    │   │   └── footer.ejs
+    │   ├── listings/
+    │   │   ├── index.ejs
+    │   │   ├── new.ejs
+    │   │   ├── show.ejs
+    │   │   └── edit.ejs
+    │   └── ai/
+    │       ├── index.ejs
+    │       └── travel-chat.ejs
+    └── public/
+        ├── css/
+        │   └── style.css
+        └── js/
+            └── script.js
+
+===================================================================================
+                         CHAPTER 9: ERROR HANDLING
+===================================================================================
+
+TRY-CATCH:
+---------
+    app.post("/listings", async (req, res) => {
+        try {
+            const newListing = new Listing(req.body.listing);
+            await newListing.save();
+            res.redirect("/listings");
+        } catch (err) {
+            res.status(400).send(`Error: ${err.message}`);
+        }
+    });
+
+
+ASYNC ERROR WRAPPER:
+-------------------
+    function wrapAsync(fn) {
+        return (req, res, next) => {
+            fn(req, res, next).catch(next);
+        };
+    }
+    
+    app.get("/listings/:id", wrapAsync(async (req, res) => {
+        const listing = await Listing.findById(req.params.id);
+        if (!listing) throw new Error("Listing not found");
+        res.render("listings/show", { listing });
+    }));
+
+
+ERROR MIDDLEWARE:
+----------------
+    app.use((err, req, res, next) => {
+        console.error(err.stack);
+        res.status(500).send("Something went wrong!");
+    });
+
+===================================================================================
+                         CHAPTER 10: INTERVIEW ANSWERS
+===================================================================================
+
+Q: What is Express.js?
+A: "Express is a minimal and flexible Node.js web framework. It
+    provides routing, middleware support, and templating integration.
+    It's the most popular Node.js framework for building web apps."
+
+Q: What is middleware?
+A: "Middleware are functions that have access to request, response,
+    and next. They can modify req/res, end the request-response cycle,
+    or call next() to pass control to the next middleware. Examples
+    include body parsers, authentication, and logging."
+
+Q: Why Mongoose over native MongoDB driver?
+A: "Mongoose provides schema validation, middleware hooks, helper
+    methods, and a cleaner API. It enforces structure on MongoDB's
+    flexible schema, which helps catch errors early."
+
+Q: What is EJS-Mate?
+A: "EJS-Mate provides layout inheritance for EJS templates. Instead
+    of repeating HTML structure in every page, I define a boilerplate
+    layout once and just change the body content for each page."
+
+Q: How do CRUD operations map to HTTP methods?
+A: "CREATE → POST, READ → GET, UPDATE → PUT, DELETE → DELETE.
+    HTML forms only support GET/POST, so I use method-override
+    for PUT and DELETE by adding ?_method=PUT to form action."
+
+===================================================================================
+                              KEY TAKEAWAYS
+===================================================================================
+
+EXPRESS:
+1. app.use() → Add middleware
+2. app.get/post/put/delete() → Define routes
+3. req.params → URL parameters
+4. req.query → Query string
+5. req.body → Request body (needs middleware)
+6. res.render() → Render EJS template
+7. res.redirect() → Redirect to URL
+8. res.json() → Send JSON response
+
+MONGOOSE:
+1. Schema → Define document structure
+2. Model → Class to interact with collection
+3. find() → Query documents
+4. findById() → Find by ID
+5. save() → Create document
+6. findByIdAndUpdate() → Update document
+7. findByIdAndDelete() → Delete document
+
+EJS:
+1. <% %> → Execute JS
+2. <%= %> → Output escaped
+3. <%- %> → Output unescaped
+4. include() → Include partial
+5. layout() → Use layout (ejs-mate)
+
+===================================================================================
+

@@ -1,0 +1,880 @@
+<%#
+===================================================================================
+                    TRAVEL-CHAT.EJS - Travel Planner Chat Interface
+===================================================================================
+
+📚 WHAT IS THIS FILE?
+---------------------
+This is the TRAVEL PLANNER page with a chat-style interface.
+Users describe their trip and the AI generates a complete itinerary.
+
+🔗 ROUTE: GET /ai/travel-chat
+   API: POST /api/travel/plan (called via JavaScript)
+
+📌 HOW IT WORKS (8-Node LangGraph Workflow):
+-------------------------------------------
+1. User describes trip: "Plan a 5-day trip to Goa from Mumbai"
+2. JavaScript sends request to /api/travel/plan
+3. Express forwards to FastAPI /agent/travel-planner
+4. LangGraph runs 8 specialized nodes:
+   - Destination Research → Transport → Accommodation
+   - Activities → Food & Shopping → Requirements
+   - Emergency Info → Package Builder
+5. Complete itinerary returned and displayed
+
+📌 CHAT UI FEATURES:
+-------------------
+- Message bubbles (user/AI styling)
+- Loading animation during processing
+- Scrollable message area
+- Responsive design
+
+📌 CSS ANIMATIONS:
+-----------------
+- @keyframes slideIn: Messages animate in
+- transition: Smooth hover effects
+- transform: Scale/translate effects
+
+📖 INTERVIEW TIP:
+----------------
+"The Travel Planner uses an 8-node LangGraph workflow where each node
+specializes in one aspect: destination research, transport, hotels,
+activities, food, requirements, emergencies, and package building.
+The chat interface provides a natural way to interact with this
+complex AI system."
+
+===================================================================================
+%>
+<% layout("layouts/boilerplate") -%>
+
+<style>
+  <%# Hero section with purple gradient %>
+  .chat-hero {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 2.5rem 0;
+    margin-bottom: 2rem;
+    border-radius: 0 0 40px 40px;
+    box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+  }
+  
+  .chat-container {
+    max-width: 950px;
+    margin: 0 auto;
+  }
+  
+  .chat-card {
+    border: none;
+    border-radius: 25px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.12);
+    overflow: hidden;
+    background: white;
+  }
+  
+  .chat-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  .chat-messages {
+    height: 600px;
+    overflow-y: auto;
+    padding: 1.5rem;
+    background: linear-gradient(180deg, #fafbfc 0%, #f0f2f5 100%);
+  }
+  
+  .message {
+    display: flex;
+    margin-bottom: 1.5rem;
+    animation: slideIn 0.3s ease;
+  }
+  
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  
+  .message.user { justify-content: flex-end; }
+  
+  .message-bubble {
+    max-width: 85%;
+    padding: 1.25rem 1.5rem;
+    border-radius: 20px;
+    position: relative;
+    word-wrap: break-word;
+    font-size: 0.95rem;
+    line-height: 1.7;
+  }
+  
+  .message.user .message-bubble {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-bottom-right-radius: 5px;
+  }
+  
+  .message.ai .message-bubble {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-bottom-left-radius: 5px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.06);
+  }
+  
+  .message-avatar {
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    margin: 0 0.75rem;
+    flex-shrink: 0;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  }
+  
+  .message.user .message-avatar { background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%); order: 1; }
+  .message.ai .message-avatar { background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); }
+  
+  .workflow-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    background: rgba(255,255,255,0.2);
+    color: white;
+    padding: 0.4rem 1rem;
+    border-radius: 50px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    backdrop-filter: blur(10px);
+  }
+  
+  .chat-input-container {
+    padding: 1.5rem;
+    background: white;
+    border-top: 1px solid #e5e7eb;
+  }
+  
+  .chat-input-wrapper {
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-end;
+  }
+  
+  .chat-input {
+    flex: 1;
+    border: 2px solid #e5e7eb;
+    border-radius: 25px;
+    padding: 0.85rem 1.5rem;
+    font-size: 1rem;
+    resize: none;
+    transition: all 0.3s ease;
+    max-height: 120px;
+    background: #f9fafb;
+  }
+  
+  .chat-input:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.15);
+    background: white;
+  }
+  
+  .send-button {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    border-radius: 50%;
+    width: 52px;
+    height: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.3rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    flex-shrink: 0;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+  }
+  
+  .send-button:hover:not(:disabled) {
+    transform: scale(1.08) translateY(-2px);
+    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+  }
+  
+  .send-button:disabled {
+    background: #9ca3af;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+  }
+  
+  .suggestion-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    margin-bottom: 1.25rem;
+  }
+  
+  .suggestion-chip {
+    background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+    border: 2px solid transparent;
+    border-radius: 25px;
+    padding: 0.6rem 1.2rem;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-weight: 500;
+  }
+  
+  .suggestion-chip:hover {
+    border-color: #667eea;
+    background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%);
+    transform: translateY(-3px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+  }
+  
+  .typing-indicator {
+    display: flex;
+    gap: 0.5rem;
+    padding: 1rem;
+  }
+  
+  .typing-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    animation: typing 1.4s infinite;
+  }
+  
+  .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+  .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+  
+  @keyframes typing {
+    0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
+    30% { transform: translateY(-12px); opacity: 1; }
+  }
+  
+  /* ===== IMPROVED CONTENT STYLING ===== */
+  
+  .info-section {
+    margin: 1.25rem 0;
+    padding: 1.5rem;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border-radius: 16px;
+    border-left: 5px solid;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+  }
+  
+  .info-section.destination { border-left-color: #10b981; }
+  .info-section.transport { border-left-color: #f59e0b; }
+  .info-section.accommodation { border-left-color: #3b82f6; }
+  .info-section.activities { border-left-color: #8b5cf6; }
+  .info-section.food { border-left-color: #ec4899; }
+  .info-section.requirements { border-left-color: #06b6d4; }
+  .info-section.emergency { border-left-color: #ef4444; }
+  .info-section.packages { border-left-color: #667eea; background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%); }
+  
+  .info-section h4 {
+    margin: 0 0 1rem 0;
+    color: #1f2937;
+    font-size: 1.15rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  
+  .info-section h4 .icon {
+    font-size: 1.3rem;
+  }
+  
+  /* Markdown Content Styling */
+  .md-content {
+    font-size: 0.95rem;
+    line-height: 1.8;
+    color: #374151;
+  }
+  
+  .md-content h1, .md-content h2, .md-content h3, .md-content h4, .md-content h5 {
+    color: #1f2937;
+    margin: 1.5rem 0 0.75rem 0;
+    font-weight: 700;
+    line-height: 1.4;
+  }
+  
+  .md-content h1 { font-size: 1.5rem; border-bottom: 2px solid #e5e7eb; padding-bottom: 0.5rem; }
+  .md-content h2 { font-size: 1.3rem; color: #4338ca; }
+  .md-content h3 { font-size: 1.15rem; color: #6366f1; }
+  .md-content h4 { font-size: 1.05rem; }
+  
+  .md-content p {
+    margin: 0.75rem 0;
+  }
+  
+  .md-content strong, .md-content b {
+    font-weight: 700;
+    color: #111827;
+  }
+  
+  .md-content ul, .md-content ol {
+    margin: 0.75rem 0;
+    padding-left: 1.5rem;
+  }
+  
+  .md-content li {
+    margin: 0.5rem 0;
+    position: relative;
+  }
+  
+  .md-content ul li::marker {
+    color: #667eea;
+  }
+  
+  /* Table Styling */
+  .md-content table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    margin: 1.25rem 0;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  }
+  
+  .md-content table th {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 1rem 1.25rem;
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  
+  .md-content table td {
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid #e5e7eb;
+    background: white;
+    font-size: 0.95rem;
+  }
+  
+  .md-content table tr:last-child td {
+    border-bottom: none;
+  }
+  
+  .md-content table tr:nth-child(even) td {
+    background: #f9fafb;
+  }
+  
+  .md-content table tr:hover td {
+    background: #ede9fe;
+  }
+  
+  /* Links */
+  .md-content a {
+    color: #667eea;
+    text-decoration: none;
+    font-weight: 600;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s ease;
+  }
+  
+  .md-content a:hover {
+    color: #764ba2;
+    border-bottom-color: #764ba2;
+  }
+  
+  /* Horizontal Rule */
+  .md-content hr {
+    border: none;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #e5e7eb, transparent);
+    margin: 1.5rem 0;
+  }
+  
+  /* Code blocks */
+  .md-content code {
+    background: #f3f4f6;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.9em;
+    color: #7c3aed;
+  }
+  
+  /* Blockquote */
+  .md-content blockquote {
+    border-left: 4px solid #667eea;
+    margin: 1rem 0;
+    padding: 0.75rem 1.25rem;
+    background: #f5f3ff;
+    border-radius: 0 8px 8px 0;
+    font-style: italic;
+  }
+  
+  /* Package Cards */
+  .package-card {
+    background: white;
+    border-radius: 16px;
+    padding: 1.5rem;
+    margin: 1.25rem 0;
+    border: 2px solid #e5e7eb;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  }
+  
+  .package-card:hover {
+    border-color: #667eea;
+    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.15);
+    transform: translateY(-3px);
+  }
+  
+  .package-title {
+    font-weight: 700;
+    color: #4338ca;
+    margin-bottom: 0.75rem;
+    font-size: 1.15rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  
+  .package-title::before {
+    content: '📦';
+  }
+  
+  .trip-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 1.5rem;
+    border-radius: 16px;
+    margin-bottom: 1.5rem;
+    text-align: center;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+  }
+  
+  .trip-header h3 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.4rem;
+  }
+  
+  .trip-details {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    flex-wrap: wrap;
+    margin-top: 1rem;
+  }
+  
+  .trip-detail {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: rgba(255,255,255,0.2);
+    padding: 0.5rem 1rem;
+    border-radius: 25px;
+    backdrop-filter: blur(10px);
+  }
+  
+  .workflow-complete {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border-radius: 50px;
+    font-weight: 600;
+    margin-top: 1.5rem;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+  }
+</style>
+
+<div class="chat-hero">
+  <div class="container text-center">
+    <h1 class="display-5 fw-bold mb-2">🧳 Travel Planner</h1>
+    <p class="lead mb-0">8-Node LangGraph Workflow • Complete Travel Planning Assistant</p>
+  </div>
+</div>
+
+<div class="container chat-container">
+  <div class="chat-card">
+    <div class="chat-header text-white">
+      <div>
+        <h5 class="mb-0">🧳 Travel Planning Assistant</h5>
+        <small class="opacity-75">Powered by 8-Node LangGraph Workflow</small>
+      </div>
+      <div class="workflow-badge">
+        <span>📊</span>
+        <span>8 Nodes</span>
+      </div>
+    </div>
+    
+    <div class="chat-messages" id="chatMessages">
+      <div class="message ai">
+        <div class="message-avatar">🧳</div>
+        <div class="message-bubble">
+          <strong>Hello! I'm your Travel Planning Assistant.</strong><br><br>
+          I can help you plan complete trips using my 8-node workflow:
+          <ul style="margin: 0.5rem 0; padding-left: 1.5rem;">
+            <li>🌍 Destination Research</li>
+            <li>🚗 Transport Options</li>
+            <li>🏨 Accommodation</li>
+            <li>🎯 Activities & Attractions</li>
+            <li>🍽️ Food & Shopping</li>
+            <li>📋 Travel Requirements</li>
+            <li>🚨 Emergency & Safety</li>
+            <li>📦 Complete Packages</li>
+          </ul>
+          <br>
+          <strong>Try asking:</strong><br>
+          "Plan a trip to Goa from Mumbai"<br>
+          "I want to visit Kerala for 5 days"<br>
+          "Help me plan a weekend trip to Shimla"
+        </div>
+      </div>
+    </div>
+    
+    <div class="chat-input-container">
+      <div class="suggestion-chips">
+        <div class="suggestion-chip" onclick="setSuggestion('Plan a trip to Goa from Mumbai')">📍 Goa Trip</div>
+        <div class="suggestion-chip" onclick="setSuggestion('I want to visit Kerala for 5 days')">🏖️ Kerala 5 Days</div>
+        <div class="suggestion-chip" onclick="setSuggestion('Weekend trip to Shimla')">🏔️ Shimla Weekend</div>
+        <div class="suggestion-chip" onclick="setSuggestion('Plan a trip to Rajasthan')">🏰 Rajasthan</div>
+      </div>
+      
+      <div class="chat-input-wrapper">
+        <textarea 
+          id="chatInput" 
+          class="chat-input" 
+          placeholder="Ask me anything about travel planning... e.g., Plan a trip to Goa from Mumbai"
+          rows="1"
+        ></textarea>
+        <button id="sendButton" class="send-button" onclick="sendMessage()">
+          <span>➤</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Include marked.js for Markdown parsing -->
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+<script>
+const chatMessages = document.getElementById('chatMessages');
+const chatInput = document.getElementById('chatInput');
+const sendButton = document.getElementById('sendButton');
+
+// Configure marked for better rendering
+if (typeof marked !== 'undefined') {
+  marked.setOptions({
+    gfm: true,
+    breaks: true,
+    tables: true
+  });
+}
+
+// Simple markdown parser fallback
+function parseMarkdown(text) {
+  if (typeof marked !== 'undefined') {
+    return marked.parse(text);
+  }
+  
+  // Fallback simple parser
+  let html = text
+    // Headers
+    .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+    .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+    .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+    // Bold
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    // Italic
+    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+    // Links
+    .replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" target="_blank">$1</a>')
+    // Horizontal rule
+    .replace(/^---$/gim, '<hr>')
+    // Line breaks
+    .replace(/\n/g, '<br>');
+  
+  // Simple table parsing
+  const tableRegex = /\|(.+)\|\n\|[-:\s|]+\|\n((?:\|.+\|\n?)+)/g;
+  html = html.replace(tableRegex, (match, header, rows) => {
+    const headerCells = header.split('|').filter(c => c.trim());
+    const headerHtml = headerCells.map(c => `<th>${c.trim()}</th>`).join('');
+    
+    const rowsArray = rows.trim().split('<br>').filter(r => r.includes('|'));
+    const rowsHtml = rowsArray.map(row => {
+      const cells = row.split('|').filter(c => c.trim());
+      return `<tr>${cells.map(c => `<td>${c.trim()}</td>`).join('')}</tr>`;
+    }).join('');
+    
+    return `<table><thead><tr>${headerHtml}</tr></thead><tbody>${rowsHtml}</tbody></table>`;
+  });
+  
+  return html;
+}
+
+// Auto-resize textarea
+chatInput.addEventListener('input', function() {
+  this.style.height = 'auto';
+  this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+});
+
+// Send on Enter (Shift+Enter for new line)
+chatInput.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+});
+
+function setSuggestion(text) {
+  chatInput.value = text;
+  chatInput.focus();
+  chatInput.style.height = 'auto';
+  chatInput.style.height = Math.min(chatInput.scrollHeight, 120) + 'px';
+}
+
+function addMessage(content, isUser = false) {
+  const messageDiv = document.createElement('div');
+  messageDiv.className = `message ${isUser ? 'user' : 'ai'}`;
+  
+  const avatar = document.createElement('div');
+  avatar.className = 'message-avatar';
+  avatar.textContent = isUser ? '👤' : '🧳';
+  
+  const bubble = document.createElement('div');
+  bubble.className = 'message-bubble';
+  bubble.innerHTML = content;
+  
+  messageDiv.appendChild(avatar);
+  messageDiv.appendChild(bubble);
+  chatMessages.appendChild(messageDiv);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+function showTyping() {
+  const typingDiv = document.createElement('div');
+  typingDiv.className = 'message ai';
+  typingDiv.id = 'typingIndicator';
+  
+  const avatar = document.createElement('div');
+  avatar.className = 'message-avatar';
+  avatar.textContent = '🧳';
+  
+  const bubble = document.createElement('div');
+  bubble.className = 'message-bubble';
+  bubble.innerHTML = `
+    <div class="typing-indicator">
+      <div class="typing-dot"></div>
+      <div class="typing-dot"></div>
+      <div class="typing-dot"></div>
+    </div>
+    <small style="color: #6b7280; margin-top: 0.5rem; display: block;">Planning your trip... This may take a moment.</small>
+  `;
+  
+  typingDiv.appendChild(avatar);
+  typingDiv.appendChild(bubble);
+  chatMessages.appendChild(typingDiv);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+function hideTyping() {
+  const typing = document.getElementById('typingIndicator');
+  if (typing) typing.remove();
+}
+
+function formatTravelResponse(data) {
+  let html = '';
+  
+  if (data.error) {
+    return `<div class="info-section emergency"><h4><span class="icon">❌</span> Error</h4><p>${data.error}</p></div>`;
+  }
+  
+  // Trip Header
+  if (data.source && data.destination) {
+    html += `
+      <div class="trip-header">
+        <h3>🧳 Your Trip to ${data.destination}</h3>
+        <div class="trip-details">
+          <div class="trip-detail"><span>📍</span> From: <strong>${data.source}</strong></div>
+          <div class="trip-detail"><span>🎯</span> To: <strong>${data.destination}</strong></div>
+        </div>
+      </div>
+    `;
+  }
+  
+  // Destination Info
+  if (data.destination_info) {
+    html += `
+      <div class="info-section destination">
+        <h4><span class="icon">🌍</span> Destination Information</h4>
+        <div class="md-content">${parseMarkdown(data.destination_info)}</div>
+      </div>
+    `;
+  }
+  
+  // Transport Info
+  if (data.transport_info) {
+    html += `
+      <div class="info-section transport">
+        <h4><span class="icon">🚗</span> Transport Options</h4>
+        <div class="md-content">${parseMarkdown(data.transport_info)}</div>
+      </div>
+    `;
+  }
+  
+  // Accommodation Info
+  if (data.accommodation_info) {
+    html += `
+      <div class="info-section accommodation">
+        <h4><span class="icon">🏨</span> Accommodation</h4>
+        <div class="md-content">${parseMarkdown(data.accommodation_info)}</div>
+      </div>
+    `;
+  }
+  
+  // Activities Info
+  if (data.activities_info) {
+    html += `
+      <div class="info-section activities">
+        <h4><span class="icon">🎯</span> Activities & Attractions</h4>
+        <div class="md-content">${parseMarkdown(data.activities_info)}</div>
+      </div>
+    `;
+  }
+  
+  // Food & Shopping Info
+  if (data.food_shopping_info) {
+    html += `
+      <div class="info-section food">
+        <h4><span class="icon">🍽️</span> Food & Shopping</h4>
+        <div class="md-content">${parseMarkdown(data.food_shopping_info)}</div>
+      </div>
+    `;
+  }
+  
+  // Requirements Info
+  if (data.requirements_info) {
+    html += `
+      <div class="info-section requirements">
+        <h4><span class="icon">📋</span> Travel Requirements</h4>
+        <div class="md-content">${parseMarkdown(data.requirements_info)}</div>
+      </div>
+    `;
+  }
+  
+  // Emergency Info
+  if (data.emergency_info) {
+    html += `
+      <div class="info-section emergency">
+        <h4><span class="icon">🚨</span> Emergency & Safety</h4>
+        <div class="md-content">${parseMarkdown(data.emergency_info)}</div>
+      </div>
+    `;
+  }
+  
+  // Packages
+  if (data.packages) {
+    html += `<div class="info-section packages"><h4><span class="icon">✨</span> Travel Packages</h4>`;
+    
+    if (Array.isArray(data.packages)) {
+      data.packages.forEach((pkg, idx) => {
+        html += `
+          <div class="package-card">
+            <div class="package-title">${pkg.title || `Package ${idx + 1}`}</div>
+            <div class="md-content">${parseMarkdown(pkg.description || String(pkg))}</div>
+          </div>
+        `;
+      });
+    } else if (typeof data.packages === 'object') {
+      Object.keys(data.packages).forEach((key, idx) => {
+        if (key !== 'generated_at') {
+          html += `
+            <div class="package-card">
+              <div class="package-title">${data.packages[key]}</div>
+            </div>
+          `;
+        }
+      });
+    }
+    
+    html += `</div>`;
+  }
+  
+  // Final Summary
+  if (data.final_summary) {
+    html += `
+      <div class="info-section packages">
+        <h4><span class="icon">📝</span> Complete Travel Package</h4>
+        <div class="md-content">${parseMarkdown(data.final_summary)}</div>
+      </div>
+    `;
+  }
+  
+  // Workflow Complete Badge
+  html += `
+    <div style="text-align: center;">
+      <div class="workflow-complete">
+        <span>✅</span>
+        <span>8-Node Workflow Complete</span>
+      </div>
+    </div>
+  `;
+  
+  return html || '<em>Planning in progress...</em>';
+}
+
+async function sendMessage() {
+  const query = chatInput.value.trim();
+  if (!query) return;
+  
+  // Add user message
+  addMessage(query, true);
+  chatInput.value = '';
+  chatInput.style.height = 'auto';
+  
+  // Disable input
+  sendButton.disabled = true;
+  chatInput.disabled = true;
+  showTyping();
+  
+  try {
+    const response = await fetch('/api/travel/plan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query })
+    });
+    
+    const data = await response.json();
+    hideTyping();
+    
+    if (data.error) {
+      addMessage(`<div class="info-section emergency"><h4><span class="icon">❌</span> Error</h4><p>${data.error}</p></div>`);
+    } else if (data.success) {
+      addMessage(formatTravelResponse(data));
+    } else {
+      addMessage(`<div class="info-section"><h4>ℹ️ Response</h4><pre style="white-space: pre-wrap;">${JSON.stringify(data, null, 2)}</pre></div>`);
+    }
+    
+  } catch (error) {
+    hideTyping();
+    console.error('Travel planner error:', error);
+    let errorMsg = error.message;
+    if (error.message.includes('Failed to fetch')) {
+      errorMsg = 'Cannot connect to server. Make sure both Express (port 8080) and FastAPI (port 8000) servers are running.';
+    }
+    addMessage(`<div class="info-section emergency"><h4><span class="icon">❌</span> Connection Error</h4><p>${errorMsg}</p></div>`);
+  } finally {
+    sendButton.disabled = false;
+    chatInput.disabled = false;
+    chatInput.focus();
+  }
+}
+</script>

@@ -1,0 +1,602 @@
+<%#
+===================================================================================
+                    SMART-CHAT.EJS - Smart Chat with Tools
+===================================================================================
+
+📚 WHAT IS THIS FILE?
+---------------------
+This is the SMART CHAT page where AI automatically detects when to use tools.
+It can search the web, get weather, stock info, news, etc.
+
+🔗 ROUTE: GET /ai/smart-chat
+   API: POST /api/chat/smart (called via JavaScript)
+
+📌 HOW SMART CHAT WORKS:
+-----------------------
+1. User asks question: "What's the weather in Mumbai?"
+2. AI analyzes query and detects intent
+3. AI automatically selects appropriate tool:
+   - Weather queries → get_weather tool
+   - News queries → web_search tool
+   - Stock queries → indian_stock_news tool
+   - General queries → direct LLM response
+4. Tool executes and returns data
+5. AI formulates response with tool data
+
+📌 AVAILABLE TOOLS:
+------------------
+- 🔍 Web Search (Tavily/DuckDuckGo)
+- 🌤️ Weather (OpenWeather API)
+- 📰 News Search
+- 📈 Stock Market News (India)
+- 📅 Date/Time
+
+📌 FORCE TOOL OPTION:
+--------------------
+User can optionally force a specific tool instead of auto-detection.
+
+📖 INTERVIEW TIP:
+----------------
+"Smart Chat implements the AI Agent pattern with automatic tool selection.
+The AI analyzes the user's query, determines if external data is needed,
+selects the appropriate tool, executes it, and incorporates the results
+into its response. This is the same pattern used by ChatGPT with plugins."
+
+===================================================================================
+%>
+<% layout("layouts/boilerplate") -%>
+
+<style>
+  <%# Hero section with green gradient (chat theme) %>
+  .chat-hero {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    padding: 2rem 0;
+    margin-bottom: 2rem;
+    border-radius: 0 0 30px 30px;
+  }
+  
+  .chat-container {
+    max-width: 900px;
+    margin: 0 auto;
+  }
+  
+  .chat-card {
+    border: none;
+    border-radius: 25px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.1);
+    overflow: hidden;
+  }
+  
+  .chat-header {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    padding: 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  .chat-messages {
+    height: 450px;
+    overflow-y: auto;
+    padding: 1.5rem;
+    background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+  }
+  
+  .message {
+    display: flex;
+    margin-bottom: 1rem;
+    animation: slideIn 0.3s ease;
+  }
+  
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  
+  .message.user { justify-content: flex-end; }
+  
+  .message-bubble {
+    max-width: 75%;
+    padding: 1rem 1.25rem;
+    border-radius: 20px;
+    position: relative;
+  }
+  
+  .message.user .message-bubble {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    border-bottom-right-radius: 5px;
+  }
+  
+  .message.ai .message-bubble {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-bottom-left-radius: 5px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+  }
+  
+  .message-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    margin: 0 0.75rem;
+    flex-shrink: 0;
+  }
+  
+  .message.user .message-avatar { background: #dbeafe; order: 1; }
+  .message.ai .message-avatar { background: #dcfce7; }
+  
+  .tool-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    background: #f0fdf4;
+    color: #166534;
+    padding: 0.25rem 0.75rem;
+    border-radius: 50px;
+    font-size: 0.75rem;
+    margin-top: 0.5rem;
+    border: 1px solid #bbf7d0;
+  }
+  
+  .chat-input-container {
+    padding: 1.5rem;
+    background: white;
+    border-top: 1px solid #e2e8f0;
+  }
+  
+  .chat-input-wrapper {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+  }
+  
+  .chat-input {
+    flex: 1;
+    border: 2px solid #e2e8f0;
+    border-radius: 25px;
+    padding: 1rem 1.5rem;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+  }
+  
+  .chat-input:focus {
+    border-color: #10b981;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+    outline: none;
+  }
+  
+  .btn-send {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    border: none;
+    color: white;
+    font-size: 1.25rem;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .btn-send:hover {
+    transform: scale(1.1);
+    box-shadow: 0 5px 20px rgba(16, 185, 129, 0.4);
+  }
+  
+  .tools-panel {
+    background: white;
+    border-radius: 20px;
+    padding: 1.5rem;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.08);
+    margin-top: 1.5rem;
+  }
+  
+  .tool-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    border-radius: 12px;
+    transition: all 0.3s ease;
+    cursor: pointer;
+  }
+  
+  .tool-item:hover { background: #f0fdf4; }
+  
+  .tool-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+  }
+  
+  .tool-icon.weather { background: #fef3c7; }
+  .tool-icon.search { background: #f3e8ff; }
+  .tool-icon.hotel { background: #dbeafe; }
+  
+  .typing-indicator {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 1rem;
+    color: #64748b;
+  }
+  
+  .typing-dots {
+    display: flex;
+    gap: 4px;
+  }
+  
+  .typing-dots span {
+    width: 8px;
+    height: 8px;
+    background: #10b981;
+    border-radius: 50%;
+    animation: bounce 1.4s infinite ease-in-out;
+  }
+  
+  .typing-dots span:nth-child(1) { animation-delay: 0s; }
+  .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+  .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+  
+  @keyframes bounce {
+    0%, 80%, 100% { transform: scale(0); }
+    40% { transform: scale(1); }
+  }
+  
+  .welcome-message {
+    text-align: center;
+    padding: 3rem 2rem;
+  }
+  
+  .suggestion-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: center;
+    margin-top: 1.5rem;
+  }
+  
+  .suggestion-chip {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 20px;
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 0.9rem;
+  }
+  
+  .suggestion-chip:hover {
+    background: #f0fdf4;
+    border-color: #10b981;
+  }
+  
+  .weather-card {
+    background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+    border-radius: 15px;
+    padding: 1.5rem;
+    margin-top: 0.5rem;
+    border: 1px solid #7dd3fc;
+  }
+  
+  .weather-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #0369a1;
+  }
+  
+  .weather-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid rgba(3, 105, 161, 0.1);
+  }
+  
+  .weather-row:last-child {
+    border-bottom: none;
+  }
+  
+  .weather-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #0c4a6e;
+    font-weight: 500;
+  }
+  
+  .weather-value {
+    color: #0369a1;
+    font-weight: 600;
+  }
+  
+  .weather-source {
+    margin-top: 0.75rem;
+    font-size: 0.75rem;
+    color: #64748b;
+    text-align: right;
+  }
+</style>
+
+<!-- Hero Section -->
+<div class="chat-hero text-center">
+  <div class="container">
+    <h2 class="fw-bold mb-2">💬 Smart Travel Chat</h2>
+    <p class="opacity-90 mb-0">Ask travel questions • Get weather info • Travel tips</p>
+  </div>
+</div>
+
+<div class="container pb-5">
+  <div class="chat-container">
+    <div class="chat-card">
+      <div class="chat-header text-white">
+        <div>
+          <h5 class="mb-0 fw-bold">Chat with Travel AI</h5>
+          <small class="opacity-90">Powered by OpenAI GPT-4</small>
+        </div>
+        <span class="badge bg-white text-success px-3 py-2">🔧 Auto Tool Detection</span>
+      </div>
+      
+      <div class="chat-messages" id="chatMessages">
+        <div class="welcome-message">
+          <div style="font-size: 4rem;">🤖</div>
+          <h4>Hello! I'm your Travel Assistant</h4>
+          <p class="text-muted">Ask me about weather, travel tips, destinations, and more!</p>
+          <div class="suggestion-chips">
+            <span class="suggestion-chip" onclick="sendSuggestion('What is the weather in Goa?')">🌤️ Weather in Goa</span>
+            <span class="suggestion-chip" onclick="sendSuggestion('Best time to visit Kerala')">🌴 Best time for Kerala</span>
+            <span class="suggestion-chip" onclick="sendSuggestion('Travel tips for Rajasthan')">🏰 Rajasthan tips</span>
+            <span class="suggestion-chip" onclick="sendSuggestion('What to pack for Manali trip?')">🎒 Manali packing</span>
+          </div>
+        </div>
+      </div>
+      
+      <div class="chat-input-container">
+        <form id="chatForm" class="chat-input-wrapper">
+          <input type="text" class="chat-input" id="chatInput" placeholder="Ask about travel, weather, destinations..." required autocomplete="off">
+          <button type="submit" class="btn-send" id="sendBtn">➤</button>
+        </form>
+      </div>
+    </div>
+    
+    <!-- Tools Panel -->
+    <div class="tools-panel">
+      <h6 class="fw-bold mb-3">🔧 Available Tools (Auto-Detected)</h6>
+      <div class="row">
+        <div class="col-md-4">
+          <div class="tool-item" onclick="sendSuggestion('What is the weather in Mumbai?')">
+            <div class="tool-icon weather">🌤️</div>
+            <div>
+              <strong>Weather</strong>
+              <p class="text-muted small mb-0">Real-time weather data</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="tool-item" onclick="sendSuggestion('Search for beach destinations in India')">
+            <div class="tool-icon search">🔍</div>
+            <div>
+              <strong>Web Search</strong>
+              <p class="text-muted small mb-0">Search travel info</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="tool-item" onclick="window.location.href='/ai/hotel-finder'">
+            <div class="tool-icon hotel">🏨</div>
+            <div>
+              <strong>Hotel Finder</strong>
+              <p class="text-muted small mb-0">Search our database</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const chatMessages = document.getElementById('chatMessages');
+const chatForm = document.getElementById('chatForm');
+const chatInput = document.getElementById('chatInput');
+const sendBtn = document.getElementById('sendBtn');
+
+let isFirstMessage = true;
+
+function formatWeatherResponse(content) {
+  // Try to parse markdown table format
+  const cityMatch = content.match(/Weather in ([^|]+)/i) || content.match(/Weather in (\w+)/i);
+  const city = cityMatch ? cityMatch[1].trim() : 'Location';
+  
+  // Extract data from markdown table - more flexible regex
+  const tempMatch = content.match(/Temperature[^*]*\*\* \| ([^\n|]+)/i) || content.match(/🌡️[^*]*\*\*Temperature\*\* \| ([^\n|]+)/i);
+  const feelsMatch = content.match(/Feels Like[^*]*\*\* \| ([^\n|]+)/i) || content.match(/🤔[^*]*\*\*Feels Like\*\* \| ([^\n|]+)/i);
+  const conditionMatch = content.match(/Condition[^*]*\*\* \| ([^\n|]+)/i) || content.match(/☁️[^*]*\*\*Condition\*\* \| ([^\n|]+)/i);
+  const humidityMatch = content.match(/Humidity[^*]*\*\* \| ([^\n|]+)/i) || content.match(/💧[^*]*\*\*Humidity\*\* \| ([^\n|]+)/i);
+  const windMatch = content.match(/Wind Speed[^*]*\*\* \| ([^\n|]+)/i) || content.match(/💨[^*]*\*\*Wind Speed\*\* \| ([^\n|]+)/i);
+  
+  // Alternative: parse from table rows directly
+  const lines = content.split('\n');
+  let temp = '', feels = '', condition = '', humidity = '', wind = '';
+  
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (line.includes('Temperature') || line.includes('🌡️')) {
+      const match = line.match(/\| ([^\|]+) \|/);
+      if (match) temp = match[1].trim();
+    }
+    if (line.includes('Feels Like') || line.includes('🤔')) {
+      const match = line.match(/\| ([^\|]+) \|/);
+      if (match) feels = match[1].trim();
+    }
+    if (line.includes('Condition') || line.includes('☁️')) {
+      const match = line.match(/\| ([^\|]+) \|/);
+      if (match) condition = match[1].trim();
+    }
+    if (line.includes('Humidity') || line.includes('💧')) {
+      const match = line.match(/\| ([^\|]+) \|/);
+      if (match) humidity = match[1].trim();
+    }
+    if (line.includes('Wind Speed') || line.includes('💨')) {
+      const match = line.match(/\| ([^\|]+) \|/);
+      if (match) wind = match[1].trim();
+    }
+  }
+  
+  // Use extracted values or fallback to regex matches
+  const finalTemp = temp || (tempMatch ? tempMatch[1].trim() : '');
+  const finalFeels = feels || (feelsMatch ? feelsMatch[1].trim() : '');
+  const finalCondition = condition || (conditionMatch ? conditionMatch[1].trim() : '');
+  const finalHumidity = humidity || (humidityMatch ? humidityMatch[1].trim() : '');
+  const finalWind = wind || (windMatch ? windMatch[1].trim() : '');
+  
+  if (finalTemp || finalCondition) {
+    return `
+      <div class="weather-card">
+        <div class="weather-header">
+          <span>🌤️</span>
+          <span>Weather in ${city}</span>
+        </div>
+        ${finalTemp ? `
+          <div class="weather-row">
+            <div class="weather-label">🌡️ Temperature</div>
+            <div class="weather-value">${finalTemp}</div>
+          </div>
+        ` : ''}
+        ${finalFeels ? `
+          <div class="weather-row">
+            <div class="weather-label">🤔 Feels Like</div>
+            <div class="weather-value">${finalFeels}</div>
+          </div>
+        ` : ''}
+        ${finalCondition ? `
+          <div class="weather-row">
+            <div class="weather-label">☁️ Condition</div>
+            <div class="weather-value">${finalCondition}</div>
+          </div>
+        ` : ''}
+        ${finalHumidity ? `
+          <div class="weather-row">
+            <div class="weather-label">💧 Humidity</div>
+            <div class="weather-value">${finalHumidity}</div>
+          </div>
+        ` : ''}
+        ${finalWind ? `
+          <div class="weather-row">
+            <div class="weather-label">💨 Wind Speed</div>
+            <div class="weather-value">${finalWind}</div>
+          </div>
+        ` : ''}
+        <div class="weather-source">Data from wttr.in</div>
+      </div>
+    `;
+  }
+  
+  return content; // Return original if parsing fails
+}
+
+function addMessage(content, isUser = false, toolUsed = null) {
+  const messageDiv = document.createElement('div');
+  messageDiv.className = `message ${isUser ? 'user' : 'ai'}`;
+  
+  // Format weather responses nicely
+  let formattedContent = content;
+  if (toolUsed === 'get_weather' && content.includes('Weather in')) {
+    formattedContent = formatWeatherResponse(content);
+  }
+  
+  let toolBadgeHtml = toolUsed ? `<div class="tool-badge">🔧 Used: ${toolUsed}</div>` : '';
+  
+  messageDiv.innerHTML = `
+    <div class="message-avatar">${isUser ? '👤' : '🤖'}</div>
+    <div class="message-bubble">${formattedContent}${toolBadgeHtml}</div>
+  `;
+  
+  chatMessages.appendChild(messageDiv);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+function showTyping() {
+  const typingDiv = document.createElement('div');
+  typingDiv.id = 'typingIndicator';
+  typingDiv.className = 'message ai';
+  typingDiv.innerHTML = `
+    <div class="message-avatar">🤖</div>
+    <div class="typing-indicator">
+      <div class="typing-dots"><span></span><span></span><span></span></div>
+      <span>AI is thinking...</span>
+    </div>
+  `;
+  chatMessages.appendChild(typingDiv);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+function removeTyping() {
+  const typingDiv = document.getElementById('typingIndicator');
+  if (typingDiv) typingDiv.remove();
+}
+
+function sendSuggestion(text) {
+  chatInput.value = text;
+  chatForm.dispatchEvent(new Event('submit'));
+}
+
+chatForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  
+  const message = chatInput.value.trim();
+  if (!message) return;
+  
+  if (isFirstMessage) {
+    chatMessages.innerHTML = '';
+    isFirstMessage = false;
+  }
+  
+  addMessage(message, true);
+  chatInput.value = '';
+  sendBtn.disabled = true;
+  
+  showTyping();
+  
+  try {
+    const response = await fetch('/api/chat/smart', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: message })
+    });
+    
+    const data = await response.json();
+    removeTyping();
+    
+    if (data.error) {
+      addMessage(`❌ Error: ${data.error}`);
+    } else {
+      const answer = data.answer || data.response || JSON.stringify(data);
+      addMessage(answer, false, data.tool_used);
+    }
+  } catch (error) {
+    removeTyping();
+    addMessage(`❌ Error: ${error.message}<br><small>Make sure FastAPI server is running on port 8000</small>`);
+  } finally {
+    sendBtn.disabled = false;
+    chatInput.focus();
+  }
+});
+
+chatInput.focus();
+</script>

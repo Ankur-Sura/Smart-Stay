@@ -1,0 +1,676 @@
+<%#
+===================================================================================
+                    AI/INDEX.EJS - AI Features Dashboard
+===================================================================================
+
+📚 WHAT IS THIS FILE?
+---------------------
+This is the MAIN AI DASHBOARD page that showcases all AI features.
+It displays feature cards, comparison tables, and workflow diagrams.
+
+🔗 ROUTE: GET /ai
+
+📌 AI FEATURES SHOWN:
+--------------------
+1. 🧳 Travel Planner - 8-node LangGraph workflow
+2. 🎒 Solo Trip Planner - 11-node HITL workflow
+3. 🔍 Hotel Finder - AI-powered database search
+
+📌 CSS CONCEPTS USED:
+--------------------
+- CSS Variables: Custom properties for colors
+- Gradients: linear-gradient() for backgrounds
+- Flexbox/Grid: Layout systems
+- Transitions: Hover effects
+- @import: Load Google Fonts
+- ::before pseudo-element: Decorative elements
+
+📌 JAVASCRIPT:
+-------------
+- Fetch API for server status checks
+- DOM manipulation for status indicators
+- async/await for API calls
+
+📖 INTERVIEW TIP:
+----------------
+"I built a comprehensive AI dashboard that visualizes the different AI
+features. The page shows real-time server status, feature comparisons,
+and LangGraph workflow diagrams. I used modern CSS techniques like
+gradients and glassmorphism for a professional look."
+
+===================================================================================
+%>
+<% layout("layouts/boilerplate") -%>
+
+<style>
+  <%# Google Fonts - Outfit for modern typography %>
+  @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
+  
+  body {
+    background: linear-gradient(180deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%) !important;
+    min-height: 100vh;
+  }
+  
+  .ai-page {
+    font-family: 'Outfit', sans-serif;
+    padding-bottom: 3rem;
+  }
+  
+  /* Hero Section */
+  .ai-hero {
+    text-align: center;
+    padding: 3rem 0 2.5rem;
+    position: relative;
+  }
+  
+  .ai-hero::before {
+    content: '';
+    position: absolute;
+    top: -200px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, rgba(139, 92, 246, 0.15) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  
+  .ai-hero h1 {
+    font-size: 2.75rem;
+    font-weight: 800;
+    color: white;
+    margin-bottom: 0.75rem;
+    position: relative;
+    letter-spacing: -0.02em;
+  }
+  
+  .ai-hero h1 .gradient-text {
+    background: linear-gradient(135deg, #c084fc 0%, #f472b6 50%, #fb923c 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  
+  .ai-hero .lead {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 1.1rem;
+    font-weight: 400;
+    margin-bottom: 1.5rem;
+  }
+  
+  /* Tech Pills */
+  .tech-pills {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.5rem;
+  }
+  
+  .tech-pill {
+    padding: 0.4rem 1rem;
+    border-radius: 100px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.75);
+    font-size: 0.8rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+  }
+  
+  .tech-pill:hover {
+    background: rgba(255, 255, 255, 0.1);
+    transform: translateY(-2px);
+  }
+  
+  /* Status Indicators */
+  .status-bar {
+    display: flex;
+    justify-content: center;
+    gap: 0.75rem;
+  }
+  
+  .server-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.4rem 0.875rem;
+    border-radius: 100px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.5);
+  }
+  
+  .server-status.online {
+    border-color: rgba(34, 197, 94, 0.3);
+    color: #4ade80;
+  }
+  
+  .server-status.offline {
+    border-color: rgba(239, 68, 68, 0.3);
+    color: #f87171;
+  }
+  
+  .status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+  
+  .status-dot.online {
+    animation: pulse 2s ease-in-out infinite;
+    box-shadow: 0 0 8px currentColor;
+  }
+  
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+  
+  /* Feature Cards */
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.25rem;
+    margin-bottom: 3rem;
+  }
+  
+  @media (max-width: 992px) {
+    .features-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  
+  @media (max-width: 576px) {
+    .features-grid { grid-template-columns: 1fr; }
+  }
+  
+  .feature-card {
+    position: relative;
+    border-radius: 20px;
+    padding: 1.75rem;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+  }
+  
+  .feature-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 20px;
+    padding: 1px;
+    background: linear-gradient(135deg, rgba(255,255,255,0.15), transparent 50%);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+  
+  .feature-card:hover {
+    transform: translateY(-6px);
+    border-color: rgba(255, 255, 255, 0.15);
+    box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.5);
+  }
+  
+  .feature-card .glow {
+    position: absolute;
+    top: -80px;
+    right: -80px;
+    width: 160px;
+    height: 160px;
+    border-radius: 50%;
+    filter: blur(60px);
+    opacity: 0.25;
+    transition: opacity 0.4s ease;
+  }
+  
+  .feature-card:hover .glow { opacity: 0.4; }
+  
+  .feature-card.travel .glow { background: #4f46e5; }
+  .feature-card.solo .glow { background: #ec4899; }
+  .feature-card.finder .glow { background: #8b5cf6; }
+  
+  .feature-icon {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+    display: block;
+  }
+  
+  .feature-card h3 {
+    color: white;
+    font-weight: 700;
+    font-size: 1.3rem;
+    margin-bottom: 0.5rem;
+  }
+  
+  .feature-card p {
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 0.875rem;
+    line-height: 1.6;
+    margin-bottom: 1.25rem;
+  }
+  
+  .feature-badges {
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.25rem;
+  }
+  
+  .feature-badge {
+    padding: 0.3rem 0.7rem;
+    border-radius: 100px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+  
+  .feature-card.travel .feature-badge { background: rgba(79, 70, 229, 0.25); color: #a5b4fc; }
+  .feature-card.solo .feature-badge { background: rgba(236, 72, 153, 0.25); color: #f9a8d4; }
+  .feature-card.finder .feature-badge { background: rgba(139, 92, 246, 0.25); color: #c4b5fd; }
+  
+  .feature-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    width: 100%;
+    padding: 0.75rem 1.25rem;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    border: none;
+  }
+  
+  .feature-card.travel .feature-btn {
+    background: linear-gradient(135deg, #4f46e5, #6366f1);
+    color: white;
+  }
+  
+  .feature-card.solo .feature-btn {
+    background: linear-gradient(135deg, #db2777, #ec4899);
+    color: white;
+  }
+  
+  .feature-card.finder .feature-btn {
+    background: linear-gradient(135deg, #7c3aed, #8b5cf6);
+    color: white;
+  }
+  
+  .feature-btn:hover {
+    transform: scale(1.02);
+    color: white;
+    box-shadow: 0 8px 25px -8px currentColor;
+  }
+  
+  /* Section Title */
+  .section-title {
+    color: white;
+    font-size: 1.5rem;
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+  }
+  
+  /* Comparison Table */
+  .comparison-container {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 16px;
+    overflow: hidden;
+    margin-bottom: 3rem;
+  }
+  
+  .comparison-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0;
+  }
+  
+  .comparison-table thead {
+    background: rgba(255, 255, 255, 0.04);
+  }
+  
+  .comparison-table th {
+    padding: 1rem 1.25rem;
+    color: rgba(255, 255, 255, 0.85);
+    font-weight: 600;
+    font-size: 0.85rem;
+    text-align: left;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  }
+  
+  .comparison-table th:first-child {
+    color: rgba(255, 255, 255, 0.5);
+  }
+  
+  .comparison-table td {
+    padding: 1rem 1.25rem;
+    color: rgba(255, 255, 255, 0.65);
+    font-size: 0.85rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  }
+  
+  .comparison-table td:first-child {
+    color: rgba(255, 255, 255, 0.4);
+    font-weight: 500;
+  }
+  
+  .comparison-table tbody tr:hover {
+    background: rgba(255, 255, 255, 0.02);
+  }
+  
+  .comparison-table tbody tr:last-child td {
+    border-bottom: none;
+  }
+  
+  /* Workflow Cards */
+  .workflows-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 3rem;
+  }
+  
+  .workflow-card {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 16px;
+    padding: 1.5rem;
+  }
+  
+  .workflow-card h4 {
+    color: white;
+    font-weight: 700;
+    font-size: 1.1rem;
+    margin-bottom: 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  
+  .workflow-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+  
+  .workflow-step {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.65rem 0.875rem;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 10px;
+    border-left: 3px solid transparent;
+    transition: all 0.3s ease;
+  }
+  
+  .workflow-card.travel .workflow-step { border-left-color: #4f46e5; }
+  .workflow-card.solo .workflow-step { border-left-color: #ec4899; }
+  
+  .workflow-step:hover {
+    background: rgba(255, 255, 255, 0.05);
+    transform: translateX(4px);
+  }
+  
+  .step-num {
+    min-width: 26px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    font-size: 0.7rem;
+    font-weight: 700;
+  }
+  
+  .workflow-card.travel .step-num { background: rgba(79, 70, 229, 0.25); color: #a5b4fc; }
+  .workflow-card.solo .step-num { background: rgba(236, 72, 153, 0.25); color: #f9a8d4; }
+  
+  .step-content {
+    color: rgba(255, 255, 255, 0.75);
+    font-size: 0.85rem;
+  }
+  
+  /* Stats Grid */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+  }
+  
+  @media (max-width: 768px) {
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    .workflows-grid { grid-template-columns: 1fr; }
+    .ai-hero h1 { font-size: 2rem; }
+  }
+  
+  .stat-card {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 14px;
+    padding: 1.25rem;
+    text-align: center;
+    transition: all 0.3s ease;
+  }
+  
+  .stat-card:hover {
+    background: rgba(255, 255, 255, 0.04);
+    transform: translateY(-3px);
+  }
+  
+  .stat-value {
+    font-size: 2rem;
+    font-weight: 800;
+    margin-bottom: 0.25rem;
+  }
+  
+  .stat-label {
+    color: rgba(255, 255, 255, 0.45);
+    font-size: 0.8rem;
+    font-weight: 500;
+  }
+  
+  .stat-card:nth-child(1) .stat-value { color: #60a5fa; }
+  .stat-card:nth-child(2) .stat-value { color: #4ade80; }
+  .stat-card:nth-child(3) .stat-value { color: #fbbf24; }
+  .stat-card:nth-child(4) .stat-value { color: #f472b6; }
+  
+  /* Footer override */
+  footer { background: transparent !important; border-top: 1px solid rgba(255,255,255,0.06) !important; }
+  footer * { color: rgba(255, 255, 255, 0.4) !important; }
+</style>
+
+<div class="ai-page">
+  <!-- Hero Section -->
+  <div class="ai-hero">
+    <h1>🤖 <span class="gradient-text">AI Features</span> Dashboard</h1>
+    <p class="lead">Smart Stay's AI-Powered Travel Planning & Hotel Discovery</p>
+    
+    <div class="tech-pills">
+      <span class="tech-pill">🐍 Python FastAPI</span>
+      <span class="tech-pill">🔗 LangGraph</span>
+      <span class="tech-pill">🧠 GPT-4</span>
+      <span class="tech-pill">🗄️ MongoDB</span>
+    </div>
+    
+    <div class="status-bar">
+      <span class="server-status" id="expressStatus">
+        <span class="status-dot"></span>
+        <span>Express: Checking...</span>
+      </span>
+      <span class="server-status" id="fastApiStatus">
+        <span class="status-dot"></span>
+        <span>FastAPI: Checking...</span>
+      </span>
+    </div>
+  </div>
+
+  <!-- Feature Cards -->
+  <div class="features-grid">
+    <div class="feature-card travel">
+      <div class="glow"></div>
+      <span class="feature-icon">🧳</span>
+      <h3>Travel Planner</h3>
+      <p>Complete travel planning with an intelligent chat interface. Uses an 8-node LangGraph workflow to generate comprehensive itineraries.</p>
+      <div class="feature-badges">
+        <span class="feature-badge">8-Node Workflow</span>
+        <span class="feature-badge">💬 Chat</span>
+      </div>
+      <a href="/ai/travel-chat" class="feature-btn">Plan Your Trip →</a>
+    </div>
+
+    <div class="feature-card solo">
+      <div class="glow"></div>
+      <span class="feature-icon">🎒</span>
+      <h3>Solo Planner</h3>
+      <p>Personalized trip planning with interactive Q&A designed specifically for solo travelers. Human-in-the-loop customization.</p>
+      <div class="feature-badges">
+        <span class="feature-badge">11-Node HITL</span>
+        <span class="feature-badge">🎯 Personal</span>
+      </div>
+      <a href="/ai/solo-planner" class="feature-btn">Plan Solo Trip →</a>
+    </div>
+
+    <div class="feature-card finder">
+      <div class="glow"></div>
+      <span class="feature-icon">🔍</span>
+      <h3>Hotel Finder</h3>
+      <p>Search hotels from the database using natural language queries. AI understands your preferences and finds the perfect match.</p>
+      <div class="feature-badges">
+        <span class="feature-badge">AI Search</span>
+        <span class="feature-badge">🏨 Real Data</span>
+      </div>
+      <a href="/ai/hotel-finder" class="feature-btn">Find Hotels →</a>
+    </div>
+  </div>
+
+  <!-- Feature Comparison -->
+  <h2 class="section-title">📊 Feature Comparison</h2>
+  <div class="comparison-container">
+    <table class="comparison-table">
+      <thead>
+        <tr>
+          <th>Feature</th>
+          <th>🧳 Travel Planner</th>
+          <th>🎒 Solo Planner</th>
+          <th>🔍 Hotel Finder</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Purpose</td>
+          <td>Full trip itinerary with chat</td>
+          <td>Personalized solo trips</td>
+          <td>Find hotels in database</td>
+        </tr>
+        <tr>
+          <td>Workflow</td>
+          <td>8-Node LangGraph</td>
+          <td>11-Node with HITL</td>
+          <td>MongoDB + AI</td>
+        </tr>
+        <tr>
+          <td>User Input</td>
+          <td>Chat interface — describe trip</td>
+          <td>Answer guided questions</td>
+          <td>Location, price, amenities</td>
+        </tr>
+        <tr>
+          <td>Output</td>
+          <td>Complete travel package</td>
+          <td>Personalized itinerary</td>
+          <td>Matching hotel listings</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Workflows -->
+  <h2 class="section-title">⚡ LangGraph Workflows</h2>
+  <div class="workflows-grid">
+    <div class="workflow-card travel">
+      <h4>🧳 8-Node Travel Workflow</h4>
+      <div class="workflow-steps">
+        <div class="workflow-step"><span class="step-num">1</span><span class="step-content">🗺️ Destination Research</span></div>
+        <div class="workflow-step"><span class="step-num">2</span><span class="step-content">🚄 Transport Finder</span></div>
+        <div class="workflow-step"><span class="step-num">3</span><span class="step-content">🏨 Accommodation Search</span></div>
+        <div class="workflow-step"><span class="step-num">4</span><span class="step-content">🎯 Activities Planner</span></div>
+        <div class="workflow-step"><span class="step-num">5</span><span class="step-content">🍽️ Food & Shopping</span></div>
+        <div class="workflow-step"><span class="step-num">6</span><span class="step-content">📋 Travel Requirements</span></div>
+        <div class="workflow-step"><span class="step-num">7</span><span class="step-content">🚨 Emergency Info</span></div>
+        <div class="workflow-step"><span class="step-num">8</span><span class="step-content">📦 Package Builder</span></div>
+      </div>
+    </div>
+
+    <div class="workflow-card solo">
+      <h4>🎒 11-Node Solo Workflow (HITL)</h4>
+      <div class="workflow-steps">
+        <div class="workflow-step"><span class="step-num">1-3</span><span class="step-content">Parse request + Ask preferences</span></div>
+        <div class="workflow-step"><span class="step-num">4</span><span class="step-content">⏸️ Wait for user answers</span></div>
+        <div class="workflow-step"><span class="step-num">5</span><span class="step-content">🗺️ Research destination</span></div>
+        <div class="workflow-step"><span class="step-num">6</span><span class="step-content">🚄 Find transport</span></div>
+        <div class="workflow-step"><span class="step-num">7</span><span class="step-content">🏨 Search accommodations</span></div>
+        <div class="workflow-step"><span class="step-num">8</span><span class="step-content">🎯 Plan activities</span></div>
+        <div class="workflow-step"><span class="step-num">9</span><span class="step-content">🍽️ Find restaurants</span></div>
+        <div class="workflow-step"><span class="step-num">10</span><span class="step-content">🚨 Add safety info</span></div>
+        <div class="workflow-step"><span class="step-num">11</span><span class="step-content">📦 Final personalization</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-value">47</div>
+      <div class="stat-label">Hotels in Database</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">3</div>
+      <div class="stat-label">AI Features</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">19</div>
+      <div class="stat-label">LangGraph Nodes</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">2</div>
+      <div class="stat-label">Workflows</div>
+    </div>
+  </div>
+</div>
+
+<script>
+async function checkServers() {
+  const expressStatus = document.getElementById('expressStatus');
+  const fastApiStatus = document.getElementById('fastApiStatus');
+  
+  expressStatus.classList.add('online');
+  expressStatus.querySelector('span:last-child').textContent = 'Express: Online (8080)';
+  expressStatus.querySelector('.status-dot').classList.add('online');
+  
+  try {
+    await fetch('http://localhost:8000/', { mode: 'no-cors' });
+    fastApiStatus.classList.add('online');
+    fastApiStatus.querySelector('span:last-child').textContent = 'FastAPI: Online (8000)';
+    fastApiStatus.querySelector('.status-dot').classList.add('online');
+  } catch (error) {
+    fastApiStatus.classList.add('offline');
+    fastApiStatus.querySelector('span:last-child').textContent = 'FastAPI: Offline';
+    fastApiStatus.querySelector('.status-dot').classList.add('offline');
+  }
+}
+checkServers();
+</script>

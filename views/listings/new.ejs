@@ -1,0 +1,116 @@
+<%#
+===================================================================================
+                    NEW.EJS - Create New Listing Form
+===================================================================================
+
+📚 WHAT IS THIS FILE?
+---------------------
+This is the form page for creating a NEW hotel listing.
+Users fill out details and submit to add a new property to the database.
+
+🔗 ROUTE: GET /listings/new (displays this form)
+         POST /listings (form submits here)
+
+📌 FORM CONCEPTS:
+----------------
+- method="POST": Sends data to server (not visible in URL)
+- action="/listings": Where form data is sent
+- name="listing[title]": Creates nested object { listing: { title: "..." } }
+- novalidate + .needs-validation: Custom Bootstrap validation
+- required: HTML5 validation attribute
+
+📖 BOOTSTRAP CLASSES USED:
+-------------------------
+- .row / .col-8: Bootstrap grid (12-column system)
+- .offset-2: Push element 2 columns from left (centers the form)
+- .form-control: Styles inputs nicely
+- .form-label: Styles labels
+- .mb-3: Margin-bottom spacing
+- .invalid-feedback: Shows error message when invalid
+
+📖 INTERVIEW TIP:
+----------------
+"I used Bootstrap's grid system for responsive form layout and implemented
+client-side validation using Bootstrap's validation classes combined with
+JavaScript. The form uses nested naming (listing[title]) which Express
+parses into a structured object."
+
+===================================================================================
+%>
+<% layout("layouts/boilerplate") -%>
+<body>
+  <%# Bootstrap Grid: row + col-8 + offset-2 = centered 8-column form %>
+  <div class="row">
+  <div class="col-8 offset-2">
+    <br>
+    <br>
+      <h3>Create a New Listing</h3>
+    <br>
+    <form method="POST" action="/listings" novalidate class="needs-validation"> <%#no validate class="needs-validation" are from Bootstrap Validation Documentation. Now we will make a script.js file which contin a code from bootstrap and we will import that file into boilerplate using script%>
+      <div class="mb-3">           <%# Here we have inserted class form label and form control and insert it inside div%>
+        <label for="title" class="form-label">Title</label>
+        <input name="listing[title]" placeholder="Enter Title" type="text" class="form-control" required/> <%# form-control is a Bootstrap class used on form elements like <input>, <textarea>, <select>.%>
+       <div class="invalid-feedback">Enter Valid Title!</div> <%# Error which will come if field is left empty%>
+       </div>
+       <br /><br />
+
+      <div class="mb-3">
+      <label for="description" class="form-label">Description</label>
+      <textarea
+        name="listing[description]"
+        placeholder="Enter Description"
+        class="form-control" 
+        required
+      ></textarea>
+      <div class="invalid-feedback">Write a Short Description!</div> <%# Error which will come if field is left empty%>
+      </div>
+      <br /><br />
+
+      <div class="mb-3">
+      <label for="image" class="form-label">Image</label>  
+      <input
+        name="listing[image]"
+        placeholder="Enter image URL/Link"
+        type="text"
+        class="form-control"
+      />
+      </div>
+        <br /><br />
+
+<%# Now what if we want to add price and country in same line so again tke row and then column %>
+      
+    <div class="row">
+      <div class="mb-3 col-md-4"> <%# mb-3 = bottom gap for that block, col-md-4 = use 4/12 columns (one-third of the row) from medium screens upwards, otherwise full-width on small screens %>
+      <label for="price" class="form-label">Price</label>  
+      <input name="listing[price]" placeholder="Enter Price" type="number" class="form-control" required/>
+      <div class="invalid-feedback">Price Required!</div> <%# Error which will come if field is left empty%>
+      </div>
+      <br /><br />
+
+      <div class="mb-3 col-md-8">
+      <label for="country" class="form-label">Country</label>  
+      <input name="listing[country]" placeholder="Enter Country" type="text" class="form-control" required/>
+      <div class="invalid-feedback">Country Name Required!</div> <%# Error which will come if field is left empty%>
+      </div>
+      <br /><br />
+      </div>
+
+
+      <div class="mb-3">
+       <label for="location" class="form-label">Location</label> 
+      <input
+        name="listing[location]"
+        placeholder="Enter Location"
+        type="text"
+        class="form-control"
+        required
+      />
+      <div class="invalid-feedback">Please Enter Valid Location!</div> <%# Error which will come if field is left empty%>
+      </div>
+      <br /><br />
+      <button class="btn btn-dark add-btn">Add</button>
+    </form>
+    <br></br>
+    </div>
+    </div>
+  </body>

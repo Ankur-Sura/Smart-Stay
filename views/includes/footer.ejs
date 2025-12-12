@@ -1,0 +1,67 @@
+<%#
+===================================================================================
+                    FOOTER.EJS - Footer Component
+===================================================================================
+
+📚 WHAT IS THIS FILE?
+---------------------
+This is a REUSABLE COMPONENT for the page footer.
+It's included in boilerplate.ejs using: <%- include("../includes/footer.ejs") %>
+
+🔗 INCLUDED IN: views/layouts/boilerplate.ejs (appears on every page)
+
+📌 STRUCTURE:
+------------
+Footer contains 3 sections:
+1. Social media icons (Font Awesome)
+2. Brand/Copyright text
+3. Legal links (Privacy, Terms)
+
+📌 CSS CLASSES (defined in style.css):
+-------------------------------------
+- .f-info: Main footer container (flexbox, centered)
+- .f-info-socials: Social icons row
+- .f-info-brand: Copyright text
+- .f-info-links: Privacy/Terms links
+
+📌 FONT AWESOME ICONS:
+---------------------
+- fa-brands: Brand icons category
+- fa-square-facebook: Facebook icon
+- fa-square-instagram: Instagram icon
+- fa-linkedin: LinkedIn icon
+
+📌 HTML ENTITIES:
+----------------
+&copy; = © (copyright symbol)
+
+📖 INTERVIEW TIP:
+----------------
+"I created reusable EJS components for the navbar and footer, which are
+included in the main layout template. This follows the DRY principle -
+if I need to update the footer, I only change one file and it updates
+across all pages."
+
+===================================================================================
+%>
+<footer>
+    <div class="f-info">
+        
+        <%# Social Media Icons - Font Awesome brand icons %>
+        <div class="f-info-socials">
+            <i class="fa-brands fa-square-facebook"></i>
+            <i class="fa-brands fa-square-instagram"></i>
+            <i class="fa-brands fa-linkedin"></i>
+        </div>
+        
+        <%# Copyright/Brand - &copy; = © symbol %>
+        <div class="f-info-brand">&copy; Smart Stay Private Limited</div>
+        
+        <%# Legal Links %>
+        <div class="f-info-links">
+            <a href="/privacy">Privacy</a>
+            <a href="/terms">Terms</a>
+        </div>
+        
+    </div>
+</footer>

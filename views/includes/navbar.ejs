@@ -1,0 +1,94 @@
+<%#
+===================================================================================
+                    NAVBAR.EJS - Navigation Bar Component
+===================================================================================
+
+📚 WHAT IS THIS FILE?
+---------------------
+This is a REUSABLE COMPONENT for the navigation bar.
+It's included in boilerplate.ejs using: <%- include("../includes/navbar.ejs") %>
+
+🔗 INCLUDED IN: views/layouts/boilerplate.ejs (appears on every page)
+
+📌 BOOTSTRAP NAVBAR CLASSES:
+---------------------------
+- .navbar: Base navbar class
+- .navbar-expand-md: Collapse to hamburger menu on screens < md (768px)
+- .bg-body-tertiary: Light background color
+- .border-bottom: Bottom border
+- .sticky-top: Navbar stays at top when scrolling
+
+📌 RESPONSIVE DESIGN:
+--------------------
+On mobile (< 768px):
+  - Navigation links collapse into hamburger menu
+  - .navbar-toggler button shows the toggle icon
+  - Clicking toggler shows/hides .navbar-collapse
+
+On desktop (≥ 768px):
+  - All links visible in horizontal row
+
+📌 FONT AWESOME ICONS:
+---------------------
+<i class="fa-regular fa-compass"></i> - Compass icon for brand
+Font Awesome loaded via CDN in boilerplate.ejs
+
+📖 INTERVIEW TIP:
+----------------
+"I used Bootstrap's responsive navbar which automatically collapses to a
+hamburger menu on mobile devices. The navbar is sticky so it stays visible
+while scrolling. I added an AI Dashboard link with custom styling to
+highlight the AI features of the application."
+
+===================================================================================
+%>
+<nav class="navbar navbar-expand-md bg-body-tertiary border-bottom sticky-top">
+  <div class="container-fluid">
+    
+    <%# Brand/Logo with compass icon %>
+    <a class="navbar-brand" href="/">
+      <i class="fa-regular fa-compass"></i> Smart Stay
+    </a>
+    
+    <%# 
+      Hamburger menu button (visible only on mobile)
+      data-bs-toggle="collapse" - Bootstrap JS handles show/hide
+      data-bs-target="#navbarNav" - Which element to toggle
+    %>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    
+    <%# 
+      Collapsible navigation links
+      Hidden on mobile, shown when hamburger clicked
+    %>
+    <div class="collapse navbar-collapse" id="navbarNav">
+      <ul class="navbar-nav">
+        
+        <%# Home link %>
+        <li class="nav-item">
+          <a class="nav-link" aria-current="page" href="/">Home</a>
+        </li>
+        
+        <%# All Listings link %>
+        <li class="nav-item">
+          <a class="nav-link" href="/listings">All Listings</a>
+        </li>
+        
+        <%# Add New Listing link %>
+        <li class="nav-item">
+          <a class="nav-link" href="/listings/new">Add New Listing</a>
+        </li>
+        
+        <%# AI Dashboard - Custom styled to stand out %>
+        <li class="nav-item">
+          <a class="nav-link" href="/ai" style="color: #8b5cf6; font-weight: 600;">
+            🤖 AI Dashboard
+          </a>
+        </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>

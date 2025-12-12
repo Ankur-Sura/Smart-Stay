@@ -1,0 +1,85 @@
+<%#
+===================================================================================
+                    SHOW.EJS - Single Listing Detail Page
+===================================================================================
+
+📚 WHAT IS THIS FILE?
+---------------------
+This is the DETAIL PAGE for a single hotel listing.
+Shows full information about one property with Edit and Delete options.
+
+🔗 ROUTE: GET /listings/:id
+   Data passed: { listing } (single listing object from MongoDB)
+
+📌 CRUD OPERATIONS:
+------------------
+This page enables 2 of the 4 CRUD operations:
+- UPDATE: Edit button links to GET /listings/:id/edit
+- DELETE: Form submits DELETE /listings/:id (via method-override)
+
+📌 INDIAN RUPEE FORMATTING:
+--------------------------
+&#8377; = HTML entity for ₹ symbol
+.toLocaleString("en-IN") = Formats number with Indian comma system
+  Example: 1500000 → "15,00,000" (Indian style: lakhs/crores)
+
+📌 DELETE OPERATION:
+-------------------
+Like PUT, HTML forms don't support DELETE method.
+We use: action="/listings/<%=listing._id%>?_method=DELETE"
+Express's method-override converts POST → DELETE
+
+📖 INTERVIEW TIP:
+----------------
+"The show page implements the 'R' in CRUD (Read) and provides actions for
+'U' (Update via edit link) and 'D' (Delete via form). I used toLocaleString
+with 'en-IN' locale to format prices in Indian currency format with proper
+comma placement (lakhs and crores system)."
+
+===================================================================================
+%>
+<% layout("layouts/boilerplate") -%>
+
+<%# Centered content with top/bottom margins %>
+<div class="row mt-3 mb-4">
+ <div class="col-8 offset-2"> 
+  <h3>Listing Details :</h3>
+  <br>
+  
+  <%# Hotel Card with Image and Details %>
+  <div class="card">
+    <%# Hotel image %>
+    <img class="card-img-top show-img" src="<%=listing.image%>" alt="Listing_Image">
+    
+    <%# Hotel information %>
+    <div class="card-body">
+      <p class="card-text"><b><%=listing.title%></b></p><br>
+      <%= listing.description %><br>
+      
+      <%# 
+        Price with Indian formatting:
+        &#8377; = Rupee symbol
+        toLocaleString("en-IN") = Indian comma system (1,00,000 not 100,000)
+      %>
+      &#8377;<%= listing.price.toLocaleString("en-IN") %><br>
+      <%= listing.location %><br>
+      <%= listing.country %>
+    </div>
+  </div>
+   
+  <br />
+  
+  <%# Edit button - links to edit form %>
+  <a href="/listings/<%= listing._id %>/edit" class="btn btn-dark">Edit</a>
+  <br /><br />
+
+  <%# 
+    Delete form - uses method-override
+    POST with ?_method=DELETE → converted to DELETE request
+  %>
+  <form method="POST" action="/listings/<%=listing._id%>?_method=DELETE">
+    <button class="btn btn-danger">Delete</button>
+  </form>
+  
+</div>
+</div>

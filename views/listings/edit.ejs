@@ -1,0 +1,113 @@
+<%#
+===================================================================================
+                    EDIT.EJS - Edit Existing Listing Form
+===================================================================================
+
+📚 WHAT IS THIS FILE?
+---------------------
+This is the EDIT FORM page for updating an existing hotel listing.
+It pre-fills the form with current data so users can modify and save.
+
+🔗 ROUTES:
+   GET /listings/:id/edit (displays this form with pre-filled data)
+   PUT /listings/:id (form submits here via method-override)
+
+📌 METHOD OVERRIDE TRICK:
+------------------------
+HTML forms only support GET and POST methods.
+To use PUT (for updates), we use the method-override package:
+
+  action="/listings/<%= listing._id %>?_method=PUT"
+  
+This sends a POST request, but Express converts it to PUT because of ?_method=PUT
+
+📌 PRE-FILLING FORM:
+-------------------
+- value="<%= listing.title %>": Pre-fills input with current data
+- <textarea><%= listing.description %></textarea>: Pre-fills textarea
+
+📖 INTERVIEW TIP:
+----------------
+"Since HTML forms don't support PUT/DELETE methods, I used the method-override
+Express middleware. The form sends a POST request with ?_method=PUT in the URL,
+and Express converts it to a PUT request. This follows RESTful conventions while
+working within HTML limitations."
+
+===================================================================================
+%>
+<% layout("layouts/boilerplate") -%>
+<body>
+  <br>
+  <br>
+  <h3>Edit your Listing</h3>
+  <br>
+  
+  <%# Centered form using Bootstrap grid %>
+  <div class="row">
+   <div class="col-8 offset-2">
+    
+    <%# 
+      Form submits to PUT /listings/:id
+      ?_method=PUT tells method-override to convert POST → PUT
+    %>
+    <form method="POST" action="/listings/<%= listing._id %>?_method=PUT" novalidate class="needs-validation">
+      <div class="mb-3">          
+      <label for="title" class="form-label">Title</label>
+      <input name="listing[title]" value="<%= listing.title %>" type="text" class="form-control" required/>
+         <div class="invalid-feedback">Enter Valid Title!</div>
+      <br /><br />
+      </div>
+
+      <div class="mb-3"> 
+        <label for="title" class="form-label">Description</label>    
+      <textarea name="listing[description]" class="form-control" required> <%= listing.description %></textarea >
+      <div class="invalid-feedback">Short Description Required!</div>
+    <br /><br /> 
+    </div>
+ 
+      <div class="mb-3">
+        <label for="title" class="form-label">Image</label>
+      <input name="listing[image]" value="<%= listing.image %>" type="text" class="form-control" required/>
+      <div class="invalid-feedback">Do Not Remove Default Image!</div>
+      <br /><br />
+      </div>
+
+       <div class="row">
+      <div class="mb-3 col-md-4">
+        <label for="title" class="form-label">Price</label>
+      <input name="listing[price]" value="<%= listing.price %>" type="number" class="form-control" required/>
+      <div class="invalid-feedback">Enter Price!</div>
+      <br/><br />
+      </div >
+
+      <div class="mb-3 col-md-8">
+        <label for="title" class="form-label">Country</label>
+      <input
+        name="listing[country]"
+        value="<%= listing.country %>"
+        type="text"
+        class="form-control"
+        required
+      />
+      <div class="invalid-feedback">Country Name Required!</div>
+      <br /><br />
+      </div>
+      </div>
+
+      <div class="mb-3">
+      <label for="title" class="form-label">Location</label>
+      <input
+        name="listing[location]"
+        value="<%= listing.location %>"
+        type="text"
+        class="form-control"
+        required
+        />
+       <div class="invalid-feedback">Enter Valid Location!</div>
+      </div>
+      <button class="btn btn-dark add-btn mt-3 mb-3">Edit Details</button> <%# When you click on this button thn it will send a POST request to route /listings/id %> 
+    </form>
+    <br>
+    </div>
+    </div>
+  </body>

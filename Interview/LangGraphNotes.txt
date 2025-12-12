@@ -1,0 +1,449 @@
+===================================================================================
+                    📊 LANGGRAPH - COMPLETE STUDY NOTES
+===================================================================================
+
+                        For Smart Stay Project
+                        Travel Planner & Solo Trip Features
+
+===================================================================================
+                         CHAPTER 1: WHAT IS LANGGRAPH?
+===================================================================================
+
+DEFINITION:
+-----------
+LangGraph is a library for building stateful, multi-step AI agent workflows
+as graphs. It's built on top of LangChain.
+
+KEY INSIGHT:
+-----------
+Think of it like a flowchart for AI:
+- Each box (node) does one task
+- Arrows (edges) show the order
+- Data (state) flows through the whole thing
+
+SIMPLE ANALOGY:
+--------------
+Traditional AI: Chef makes entire meal at once
+LangGraph AI: Assembly line - one station chops, one cooks, one plates
+
+WHY LANGGRAPH?
+-------------
+1. Complex tasks need multiple steps
+2. Each step can use different tools
+3. State persists across steps
+4. Can pause for human input (HITL)
+5. Easy to visualize and debug
+
+===================================================================================
+                         CHAPTER 2: CORE CONCEPTS
+===================================================================================
+
+CONCEPT 1: STATE
+----------------
+What: A TypedDict that holds all data flowing through the graph
+Why: Each node can read from and write to state
+How:
+    class MyState(TypedDict):
+        query: str
+        results: list
+        final_answer: str
+
+IMPORTANT: Nodes receive full state, return PARTIAL updates
+           LangGraph merges updates automatically
+
+    def my_node(state: MyState) -> dict:
+        # Gets full state
+        query = state["query"]
+        # Returns only what changed
+        return {"results": ["result1", "result2"]}
+
+
+CONCEPT 2: NODES
+----------------
+What: Functions that process state
+Why: Each node has ONE responsibility (Single Responsibility Principle)
+How:
+    def research_node(state: MyState) -> dict:
+        """Research the topic"""
+        data = web_search(state["query"])
+        return {"research_data": data}
+    
+    def analyze_node(state: MyState) -> dict:
+        """Analyze research data"""
+        analysis = llm_analyze(state["research_data"])
+        return {"analysis": analysis}
+
+
+CONCEPT 3: EDGES
+----------------
+What: Connections between nodes (like arrows in flowchart)
+Types:
+    1. Normal edge: A → B (always goes to B)
+       graph.add_edge("node_a", "node_b")
+    
+    2. Conditional edge: A → B or C (depends on condition)
+       graph.add_conditional_edge("node_a", route_function, {
+           "option1": "node_b",
+           "option2": "node_c"
+       })
+
+CONCEPT 4: START & END
+----------------------
+What: Special nodes marking graph boundaries
+How:
+    from langgraph.graph import START, END
+    
+    graph.add_edge(START, "first_node")      # Entry point
+    graph.add_edge("last_node", END)         # Exit point
+
+
+CONCEPT 5: COMPILATION
+----------------------
+What: Converting graph definition to runnable app
+How:
+    # Define graph
+    graph = StateGraph(MyState)
+    graph.add_node(...)
+    graph.add_edge(...)
+    
+    # Compile to app
+    app = graph.compile()
+    
+    # Now you can invoke it
+    result = app.invoke({"query": "test"})
+
+===================================================================================
+                         CHAPTER 3: BUILDING A GRAPH
+===================================================================================
+
+STEP-BY-STEP PROCESS:
+--------------------
+
+STEP 1: Define State
+    class TravelState(TypedDict):
+        query: str
+        destination: str
+        weather: str
+        hotels: list
+        activities: list
+        final_plan: str
+
+STEP 2: Create Node Functions
+    def extract_destination(state: TravelState) -> dict:
+        # Extract destination from query
+        destination = llm_extract(state["query"])
+        return {"destination": destination}
+    
+    def get_weather(state: TravelState) -> dict:
+        # Get weather for destination
+        weather = weather_api(state["destination"])
+        return {"weather": weather}
+    
+    def find_hotels(state: TravelState) -> dict:
+        # Find hotels
+        hotels = search_hotels(state["destination"])
+        return {"hotels": hotels}
+    
+    def plan_activities(state: TravelState) -> dict:
+        # Plan activities based on weather
+        activities = suggest_activities(
+            state["destination"],
+            state["weather"]
+        )
+        return {"activities": activities}
+    
+    def create_plan(state: TravelState) -> dict:
+        # Create final plan
+        plan = format_plan(
+            state["destination"],
+            state["weather"],
+            state["hotels"],
+            state["activities"]
+        )
+        return {"final_plan": plan}
+
+STEP 3: Build Graph
+    from langgraph.graph import StateGraph, START, END
+    
+    graph = StateGraph(TravelState)
+    
+    # Add nodes
+    graph.add_node("extract", extract_destination)
+    graph.add_node("weather", get_weather)
+    graph.add_node("hotels", find_hotels)
+    graph.add_node("activities", plan_activities)
+    graph.add_node("plan", create_plan)
+    
+    # Add edges (define flow)
+    graph.add_edge(START, "extract")
+    graph.add_edge("extract", "weather")
+    graph.add_edge("weather", "hotels")
+    graph.add_edge("hotels", "activities")
+    graph.add_edge("activities", "plan")
+    graph.add_edge("plan", END)
+
+STEP 4: Compile
+    app = graph.compile()
+
+STEP 5: Run
+    result = app.invoke({
+        "query": "Plan a trip to Goa"
+    })
+    
+    print(result["final_plan"])
+
+===================================================================================
+                         CHAPTER 4: STATE MANAGEMENT
+===================================================================================
+
+HOW STATE FLOWS:
+---------------
+
+Initial State (what you pass to invoke):
+    {
+        "query": "Plan trip to Goa"
+    }
+
+After Node 1 (extract):
+    {
+        "query": "Plan trip to Goa",
+        "destination": "Goa, India"
+    }
+
+After Node 2 (weather):
+    {
+        "query": "Plan trip to Goa",
+        "destination": "Goa, India",
+        "weather": "Sunny, 32°C"
+    }
+
+... and so on
+
+IMPORTANT RULES:
+---------------
+1. Always return a dict from nodes
+2. Only include fields that changed
+3. LangGraph handles merging
+4. State is immutable within a node (don't modify, return new)
+
+
+STATE WITH LISTS (Special Case):
+-------------------------------
+For lists that should append, use Annotated:
+
+    from typing import Annotated
+    from langgraph.graph.message import add_messages
+    
+    class ChatState(TypedDict):
+        messages: Annotated[list, add_messages]
+    
+    # Now returning a message APPENDS to list, not replaces
+    def chat_node(state):
+        return {"messages": [new_message]}  # Appends!
+
+===================================================================================
+                         CHAPTER 5: CONDITIONAL EDGES
+===================================================================================
+
+WHAT: Routes to different nodes based on state
+
+EXAMPLE - Weather-based routing:
+    
+    def route_by_weather(state: TravelState) -> str:
+        """Decide next node based on weather"""
+        if "rain" in state["weather"].lower():
+            return "indoor_activities"
+        else:
+            return "outdoor_activities"
+    
+    # In graph building:
+    graph.add_conditional_edge(
+        "weather",              # Source node
+        route_by_weather,       # Router function
+        {
+            "indoor_activities": "indoor_node",
+            "outdoor_activities": "outdoor_node"
+        }
+    )
+
+EXAMPLE - Validation routing:
+    
+    def route_validation(state) -> str:
+        if state.get("is_valid"):
+            return "process"
+        else:
+            return "error_handler"
+    
+    graph.add_conditional_edge(
+        "validator",
+        route_validation,
+        {
+            "process": "process_node",
+            "error_handler": "error_node"
+        }
+    )
+
+===================================================================================
+                         CHAPTER 6: IN SMART STAY
+===================================================================================
+
+TRAVEL PLANNER (8 NODES):
+------------------------
+
+    START
+      ↓
+    destination_researcher    → Research destination
+      ↓
+    transport_finder          → Find flights, trains, buses
+      ↓
+    accommodation_finder      → Find hotels
+      ↓
+    activities_planner        → Plan activities
+      ↓
+    food_shopping_guide       → Find restaurants, markets
+      ↓
+    travel_requirements       → Visa, SIM, currency
+      ↓
+    emergency_safety          → Hospitals, police
+      ↓
+    package_builder           → Create final packages
+      ↓
+    END
+
+Each node:
+- Receives ALL accumulated state
+- Uses web search + LLM
+- Returns its specific data
+- Passes to next node
+
+
+SOLO TRIP PLANNER (11 NODES with HITL):
+--------------------------------------
+
+    START
+      ↓
+    extract_details           → Extract trip details
+      ↓
+    ask_travel_mode ←-------→ [USER INPUT]  (interrupt)
+      ↓
+    ask_food_preference ←---→ [USER INPUT]  (interrupt)
+      ↓
+    ask_budget ←------------→ [USER INPUT]  (interrupt)
+      ↓
+    ask_accommodation ←-----→ [USER INPUT]  (interrupt)
+      ↓
+    research_destination      → Research with preferences
+      ↓
+    plan_transport            → Plan based on travel mode
+      ↓
+    plan_accommodation        → Plan based on budget
+      ↓
+    plan_activities           → Plan based on preferences
+      ↓
+    plan_food                 → Plan based on food preference
+      ↓
+    create_itinerary          → Create personalized plan
+      ↓
+    END
+
+===================================================================================
+                         CHAPTER 7: DEBUGGING TIPS
+===================================================================================
+
+TIP 1: Print state at each node
+    def my_node(state):
+        print(f"[my_node] Received state keys: {state.keys()}")
+        print(f"[my_node] Query: {state.get('query')}")
+        # ... processing
+        result = {...}
+        print(f"[my_node] Returning: {result.keys()}")
+        return result
+
+TIP 2: Visualize the graph
+    # After compiling
+    app = graph.compile()
+    print(app.get_graph().draw_ascii())  # ASCII visualization
+
+TIP 3: Test nodes individually
+    # Test one node
+    test_state = {"query": "test", "destination": "Goa"}
+    result = research_node(test_state)
+    print(result)
+
+TIP 4: Check edge connections
+    # Print all edges
+    for edge in graph.edges:
+        print(f"{edge.source} → {edge.target}")
+
+===================================================================================
+                         CHAPTER 8: COMMON PATTERNS
+===================================================================================
+
+PATTERN 1: Sequential Processing
+    START → A → B → C → END
+    
+    Use when: Each step depends on previous
+
+PATTERN 2: Parallel then Merge
+    START → A → [B, C, D in parallel] → E → END
+    
+    Use when: Independent tasks can run together
+
+PATTERN 3: Conditional Branching
+    START → A → [B or C based on condition] → D → END
+    
+    Use when: Different paths based on data
+
+PATTERN 4: Loop with Exit Condition
+    START → A → B → [back to A or to END]
+    
+    Use when: Iterative refinement needed
+
+PATTERN 5: Human-in-the-Loop
+    START → A → [INTERRUPT - wait for human] → B → END
+    
+    Use when: Human input needed mid-workflow
+
+===================================================================================
+                         CHAPTER 9: INTERVIEW ANSWERS
+===================================================================================
+
+Q: What is LangGraph?
+A: "LangGraph is a framework for building stateful, multi-step AI workflows
+    as directed graphs. Each node is a function that processes state, and
+    edges define the flow between nodes."
+
+Q: Why did you use LangGraph?
+A: "Travel planning is complex - it needs multiple steps like researching
+    destinations, finding transport, booking hotels, planning activities.
+    LangGraph lets me break this into specialized nodes that each do one
+    thing well, while state flows through maintaining context."
+
+Q: How does state work in LangGraph?
+A: "State is defined as a TypedDict. Each node receives the full state,
+    processes it, and returns a partial update with only changed fields.
+    LangGraph automatically merges these updates. This is similar to
+    Redux reducers in frontend development."
+
+Q: What's the difference between your 8-node and 11-node workflows?
+A: "The 8-node Travel Planner runs automatically from start to end.
+    The 11-node Solo Trip Planner uses Human-in-the-Loop - it pauses
+    at 4 points to ask user preferences (travel mode, food, budget,
+    accommodation), then uses those preferences to personalize the plan."
+
+===================================================================================
+                              KEY TAKEAWAYS
+===================================================================================
+
+1. LangGraph = Graphs for AI workflows
+2. State = TypedDict flowing through nodes
+3. Nodes = Functions that process state
+4. Edges = Connections defining flow
+5. compile() = Make graph runnable
+6. invoke() = Run the graph
+
+REMEMBER: LangGraph makes complex AI tasks manageable by breaking them
+          into small, focused, testable pieces.
+
+===================================================================================
+

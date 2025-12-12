@@ -1,0 +1,504 @@
+<%#
+===================================================================================
+                    EXTRACT-AMENITIES.EJS - NLP Amenity Extraction
+===================================================================================
+
+📚 WHAT IS THIS FILE?
+---------------------
+This is the NLP AMENITY EXTRACTION page where AI extracts amenities
+from hotel descriptions using Natural Language Processing.
+
+🔗 ROUTE: GET /ai/extract-amenities (if enabled)
+   APIs:
+   - POST /api/listings/:id/extract-amenities (single listing)
+   - POST /api/listings/bulk-extract-amenities (all listings)
+   - POST /api/test-extract-amenities (test with custom text)
+
+📌 HOW NLP EXTRACTION WORKS:
+---------------------------
+1. Take hotel description text:
+   "Luxury villa with pool, WiFi, parking, and beach access"
+2. AI analyzes text using OpenAI GPT
+3. Extracts structured amenities:
+   ["Pool", "WiFi", "Parking", "Beach Access"]
+4. Saves to MongoDB listing.amenities array
+
+📌 THREE MODES:
+--------------
+1. BULK EXTRACTION: Process all listings without amenities
+2. TEST EXTRACTION: Try with custom text (doesn't save)
+3. SINGLE EXTRACTION: Process one listing by ID
+
+📌 WHY THIS IS USEFUL:
+---------------------
+- Converts unstructured text → structured data
+- Enables amenity-based filtering in Hotel Finder
+- Demonstrates practical NLP application
+
+📖 INTERVIEW TIP:
+----------------
+"The Amenity Extraction feature uses NLP to convert unstructured hotel
+descriptions into structured amenity arrays. This transforms text like
+'beautiful villa with pool and WiFi' into searchable fields ['Pool', 'WiFi'].
+This is a practical example of using AI to enrich existing data."
+
+===================================================================================
+%>
+<% layout("layouts/boilerplate") -%>
+
+<style>
+  <%# Hero section with orange/amber gradient (NLP/extraction theme) %>
+  .nlp-hero {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    color: white;
+    padding: 2rem 0;
+    margin-bottom: 2rem;
+    border-radius: 0 0 30px 30px;
+  }
+  
+  .action-card {
+    border: none;
+    border-radius: 20px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+    overflow: hidden;
+    transition: all 0.3s ease;
+  }
+  
+  .action-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+  }
+  
+  .bulk-card .card-header {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    padding: 1.5rem;
+  }
+  
+  .test-card .card-header {
+    background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+    padding: 1.5rem;
+  }
+  
+  .results-card .card-header {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    padding: 1.5rem;
+  }
+  
+  .btn-extract {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    border: none;
+    border-radius: 12px;
+    padding: 1rem 2rem;
+    font-weight: 600;
+    color: white;
+    font-size: 1.1rem;
+    transition: all 0.3s ease;
+  }
+  
+  .btn-extract:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(245, 158, 11, 0.3);
+    color: white;
+  }
+  
+  .btn-test {
+    background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+    border: none;
+    border-radius: 12px;
+    padding: 1rem 2rem;
+    font-weight: 600;
+    color: white;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+  }
+  
+  .btn-test:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(6, 182, 212, 0.3);
+    color: white;
+  }
+  
+  .form-control {
+    border-radius: 12px;
+    padding: 1rem;
+    border: 2px solid #e2e8f0;
+  }
+  
+  .form-control:focus {
+    border-color: #f59e0b;
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1);
+  }
+  
+  .amenity-badge {
+    display: inline-block;
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 50px;
+    margin: 0.25rem;
+    font-weight: 500;
+    animation: popIn 0.3s ease;
+  }
+  
+  @keyframes popIn {
+    from {
+      opacity: 0;
+      transform: scale(0.8);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+  
+  .process-flow {
+    background: #f8fafc;
+    border-radius: 20px;
+    padding: 2rem;
+    margin-top: 2rem;
+  }
+  
+  .process-step {
+    text-align: center;
+    padding: 1.5rem;
+  }
+  
+  .process-icon {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    margin: 0 auto 1rem;
+  }
+  
+  .process-icon.input { background: #fef3c7; }
+  .process-icon.process { background: #dbeafe; }
+  .process-icon.output { background: #dcfce7; }
+  
+  .process-arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    color: #94a3b8;
+  }
+  
+  .stats-box {
+    background: white;
+    border-radius: 15px;
+    padding: 1.5rem;
+    text-align: center;
+    border: 2px solid #e2e8f0;
+  }
+  
+  .stats-number {
+    font-size: 2.5rem;
+    font-weight: bold;
+    color: #1e293b;
+  }
+  
+  .stats-label {
+    color: #64748b;
+    font-size: 0.9rem;
+  }
+  
+  .progress-bar-custom {
+    height: 8px;
+    border-radius: 4px;
+    background: #e2e8f0;
+    overflow: hidden;
+    margin-top: 1rem;
+  }
+  
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #f59e0b 0%, #10b981 100%);
+    border-radius: 4px;
+    transition: width 0.5s ease;
+  }
+  
+  .result-alert {
+    border-radius: 15px;
+    padding: 1.5rem;
+    border: none;
+  }
+  
+  .result-alert.success {
+    background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+    color: #166534;
+  }
+  
+  .result-alert.error {
+    background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+    color: #991b1b;
+  }
+  
+  .result-alert.info {
+    background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+    color: #0369a1;
+  }
+  
+  .listing-item {
+    background: white;
+    border-radius: 12px;
+    padding: 1rem;
+    margin-bottom: 0.75rem;
+    border: 1px solid #e2e8f0;
+    transition: all 0.3s ease;
+  }
+  
+  .listing-item:hover {
+    border-color: #f59e0b;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+  }
+  
+  .loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #e2e8f0;
+    border-top-color: #f59e0b;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto;
+  }
+  
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+</style>
+
+<!-- Hero Section -->
+<div class="nlp-hero text-center">
+  <div class="container">
+    <h2 class="fw-bold mb-2">🏷️ NLP Amenity Extraction</h2>
+    <p class="opacity-90 mb-0">Extract amenities from hotel descriptions using GPT-4</p>
+  </div>
+</div>
+
+<div class="container pb-5">
+  <div class="row g-4">
+    <!-- Bulk Extract -->
+    <div class="col-lg-6">
+      <div class="card action-card bulk-card h-100">
+        <div class="card-header text-white">
+          <h5 class="mb-0 fw-bold">🔄 Bulk Extract Amenities</h5>
+        </div>
+        <div class="card-body p-4">
+          <p class="mb-4">Process all hotel listings at once and extract amenities automatically from their descriptions.</p>
+          
+          <div class="row mb-4">
+            <div class="col-4">
+              <div class="stats-box">
+                <div class="stats-number" id="totalListings">47</div>
+                <div class="stats-label">Total Listings</div>
+              </div>
+            </div>
+            <div class="col-4">
+              <div class="stats-box">
+                <div class="stats-number text-success" id="successCount">0</div>
+                <div class="stats-label">Processed</div>
+              </div>
+            </div>
+            <div class="col-4">
+              <div class="stats-box">
+                <div class="stats-number text-danger" id="failedCount">0</div>
+                <div class="stats-label">Failed</div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="progress-bar-custom mb-4">
+            <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+          </div>
+          
+          <button class="btn btn-extract w-100" id="bulkExtractBtn">
+            🚀 Extract All Amenities
+          </button>
+          
+          <div id="bulkResult" class="mt-4"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Test Extraction -->
+    <div class="col-lg-6">
+      <div class="card action-card test-card h-100">
+        <div class="card-header text-white">
+          <h5 class="mb-0 fw-bold">🧪 Test with Custom Description</h5>
+        </div>
+        <div class="card-body p-4">
+          <form id="testForm">
+            <div class="mb-4">
+              <label class="form-label fw-semibold">Hotel Description:</label>
+              <textarea class="form-control" id="description" rows="5" placeholder="Enter a hotel description...">This luxury villa features a private infinity pool, fully equipped kitchen, high-speed WiFi, air conditioning, and secure parking. Perfect for families with kids! The property also includes a beautiful garden, gym, and spa facilities.</textarea>
+            </div>
+            <button type="submit" class="btn btn-test w-100">
+              ✨ Extract Amenities
+            </button>
+          </form>
+          
+          <div id="testResult" class="mt-4"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- How it Works -->
+  <div class="process-flow">
+    <h4 class="text-center fw-bold mb-4">📖 How NLP Extraction Works</h4>
+    <div class="row align-items-center">
+      <div class="col-md-3">
+        <div class="process-step">
+          <div class="process-icon input">📝</div>
+          <h6 class="fw-bold">1. Input</h6>
+          <p class="text-muted small mb-0">"This hotel has WiFi, pool, and secure parking..."</p>
+        </div>
+      </div>
+      <div class="col-md-1 d-none d-md-block">
+        <div class="process-arrow">→</div>
+      </div>
+      <div class="col-md-4">
+        <div class="process-step">
+          <div class="process-icon process">🧠</div>
+          <h6 class="fw-bold">2. GPT-4 Analysis</h6>
+          <p class="text-muted small mb-0">AI reads description and identifies amenities (explicit + inferred)</p>
+        </div>
+      </div>
+      <div class="col-md-1 d-none d-md-block">
+        <div class="process-arrow">→</div>
+      </div>
+      <div class="col-md-3">
+        <div class="process-step">
+          <div class="process-icon output">✅</div>
+          <h6 class="fw-bold">3. Output</h6>
+          <p class="text-muted small mb-0">["WiFi", "Pool", "Parking"] saved to database</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sample Results -->
+  <div class="mt-4">
+    <h5 class="fw-bold mb-3">📋 Sample Listings</h5>
+    <div id="sampleListings">
+      <div class="listing-item">
+        <div class="d-flex justify-content-between align-items-start">
+          <div>
+            <strong>Luxury Beachfront Villa in Calangute</strong>
+            <p class="text-muted small mb-2">Private pool, WiFi, AC, kitchen, parking...</p>
+          </div>
+          <a href="/listings" class="btn btn-sm btn-outline-primary">View All →</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Bulk extract
+document.getElementById('bulkExtractBtn').addEventListener('click', async () => {
+  const btn = document.getElementById('bulkExtractBtn');
+  const resultDiv = document.getElementById('bulkResult');
+  const progressFill = document.getElementById('progressFill');
+  const successCount = document.getElementById('successCount');
+  const failedCount = document.getElementById('failedCount');
+  
+  btn.disabled = true;
+  btn.innerHTML = '<div class="loading-spinner" style="width: 24px; height: 24px; display: inline-block; vertical-align: middle;"></div> Processing...';
+  resultDiv.innerHTML = '<div class="result-alert info">⏳ Extracting amenities from all listings...</div>';
+  progressFill.style.width = '20%';
+  
+  try {
+    const response = await fetch('/api/listings/bulk-extract-amenities', {
+      method: 'POST'
+    });
+    
+    const data = await response.json();
+    progressFill.style.width = '100%';
+    
+    if (data.error) {
+      resultDiv.innerHTML = `<div class="result-alert error">❌ ${data.error}</div>`;
+    } else {
+      const total = data.processed || 0;
+      const success = data.success || 0;
+      const failed = data.failed || 0;
+      
+      successCount.textContent = success;
+      failedCount.textContent = failed;
+      
+      if (success > 0) {
+        resultDiv.innerHTML = `
+          <div class="result-alert success">
+            <h5 class="mb-2">✅ Extraction Complete!</h5>
+            <p class="mb-0">Processed: ${total} | Success: ${success} | Failed: ${failed}</p>
+          </div>
+        `;
+      } else {
+        resultDiv.innerHTML = `
+          <div class="result-alert error">
+            <h5 class="mb-2">⚠️ Extraction Failed</h5>
+            <p class="mb-2">All ${total} listings failed to process.</p>
+            <small>Make sure FastAPI server is running on port 8000</small>
+          </div>
+        `;
+      }
+    }
+  } catch (error) {
+    progressFill.style.width = '0%';
+    resultDiv.innerHTML = `
+      <div class="result-alert error">
+        <h5 class="mb-2">❌ Connection Error</h5>
+        <p class="mb-2">${error.message}</p>
+        <small>Make sure FastAPI server is running: <code>cd "AI Compare" && python3 main.py</code></small>
+      </div>
+    `;
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '🚀 Extract All Amenities';
+  }
+});
+
+// Test extraction
+document.getElementById('testForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  
+  const description = document.getElementById('description').value;
+  const resultDiv = document.getElementById('testResult');
+  
+  resultDiv.innerHTML = '<div class="result-alert info"><div class="loading-spinner"></div> Extracting...</div>';
+  
+  try {
+    // Use Express proxy to avoid CORS issues
+    const response = await fetch('/api/test-extract-amenities', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ description })
+    });
+    
+    const data = await response.json();
+    
+    if (data.amenities && data.amenities.length > 0) {
+      const amenitiesHtml = data.amenities.map(a => `<span class="amenity-badge">${a}</span>`).join('');
+      resultDiv.innerHTML = `
+        <div class="result-alert success">
+          <h5 class="mb-3">✨ Extracted Amenities:</h5>
+          <div>${amenitiesHtml}</div>
+        </div>
+      `;
+    } else {
+      resultDiv.innerHTML = `<div class="result-alert error">⚠️ No amenities found or error occurred.</div>`;
+    }
+  } catch (error) {
+    resultDiv.innerHTML = `
+      <div class="result-alert error">
+        <h5 class="mb-2">❌ Connection Error</h5>
+        <p class="mb-2">${error.message}</p>
+        <small>Make sure FastAPI server is running on port 8000</small>
+      </div>
+    `;
+  }
+});
+</script>

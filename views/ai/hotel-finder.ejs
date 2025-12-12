@@ -1,0 +1,416 @@
+<%#
+===================================================================================
+                    HOTEL-FINDER.EJS - AI Hotel Search Page
+===================================================================================
+
+📚 WHAT IS THIS FILE?
+---------------------
+This is the AI HOTEL FINDER page where users can search for hotels
+using natural language queries and filters.
+
+🔗 ROUTE: GET /ai/hotel-finder
+   API: GET /api/hotels/search (called via JavaScript)
+
+📌 HOW IT WORKS:
+---------------
+1. User enters search criteria (location, price, amenities)
+2. JavaScript sends request to /api/hotels/search
+3. Express route queries MongoDB with filters
+4. AI scores relevance if natural language query provided
+5. Results displayed as hotel cards
+
+📌 SEARCH FEATURES:
+------------------
+- Natural Language: "luxury hotels in Goa with pool"
+- Location Filter: City/state search
+- Price Filter: Maximum price per night
+- Amenity Filter: WiFi, Pool, Parking, etc.
+
+📌 JAVASCRIPT CONCEPTS:
+---------------------
+- Form submission handling
+- Fetch API for AJAX requests
+- DOM manipulation to display results
+- Template literals for dynamic HTML
+
+📖 INTERVIEW TIP:
+----------------
+"The Hotel Finder combines traditional database filtering with AI-powered
+relevance scoring. When a natural language query is provided, the backend
+extracts keywords and scores each hotel based on how well it matches.
+This provides a smarter search experience than simple keyword matching."
+
+===================================================================================
+%>
+<% layout("layouts/boilerplate") -%>
+
+<style>
+  <%# Hero section gradient styling %>
+  .finder-hero {
+    background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
+    color: white;
+    padding: 2rem 0;
+    margin-bottom: 2rem;
+    border-radius: 0 0 30px 30px;
+  }
+  
+  .search-card {
+    border: none;
+    border-radius: 20px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+    overflow: hidden;
+  }
+  
+  .search-card .card-header {
+    background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
+    border: none;
+    padding: 1.5rem;
+  }
+  
+  .form-control, .form-select {
+    border-radius: 10px;
+    padding: 0.75rem 1rem;
+    border: 2px solid #e2e8f0;
+  }
+  
+  .form-control:focus, .form-select:focus {
+    border-color: #8b5cf6;
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+  }
+  
+  .btn-search {
+    background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
+    border: none;
+    border-radius: 10px;
+    padding: 1rem;
+    font-weight: 600;
+    color: white;
+  }
+  
+  .btn-search:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(139, 92, 246, 0.3);
+    color: white;
+  }
+  
+  .hotel-card {
+    border: none;
+    border-radius: 15px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+  }
+  
+  .hotel-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 30px rgba(0,0,0,0.15);
+  }
+  
+  .hotel-card img {
+    height: 180px;
+    object-fit: cover;
+  }
+  
+  .amenity-tag {
+    display: inline-block;
+    background: #f3e8ff;
+    color: #7c3aed;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    margin: 0.15rem;
+  }
+  
+  .price-tag {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 10px;
+    font-weight: bold;
+  }
+  
+  .match-score {
+    background: #fef3c7;
+    color: #92400e;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+  }
+  
+  .results-container {
+    min-height: 400px;
+  }
+  
+  .no-results {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: #64748b;
+  }
+  
+  .no-results .icon {
+    font-size: 4rem;
+    opacity: 0.3;
+  }
+  
+  .loading {
+    text-align: center;
+    padding: 3rem;
+  }
+  
+  .loading-spinner {
+    width: 50px;
+    height: 50px;
+    border: 4px solid #e2e8f0;
+    border-top-color: #8b5cf6;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto;
+  }
+  
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+  
+  .example-searches {
+    background: #f8fafc;
+    border-radius: 15px;
+    padding: 1.25rem;
+    margin-top: 1.5rem;
+  }
+  
+  .example-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+  }
+  
+  .example-chip {
+    display: inline-flex;
+    align-items: center;
+    background: white;
+    border: 2px solid #e2e8f0;
+    border-radius: 25px;
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 0.85rem;
+    white-space: nowrap;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+  }
+  
+  .example-chip:hover {
+    background: linear-gradient(135deg, #f3e8ff 0%, #ede9fe 100%);
+    border-color: #8b5cf6;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.2);
+  }
+</style>
+
+<!-- Hero Section -->
+<div class="finder-hero text-center">
+  <div class="container">
+    <h2 class="fw-bold mb-2">🔍 AI Hotel Finder</h2>
+    <p class="opacity-90 mb-0">Search hotels from our database using natural language</p>
+  </div>
+</div>
+
+<div class="container pb-5">
+  <div class="row g-4">
+    <!-- Search Form -->
+    <div class="col-lg-4">
+      <div class="card search-card">
+        <div class="card-header text-white">
+          <h5 class="mb-0 fw-bold">🎯 Find Your Perfect Stay</h5>
+        </div>
+        <div class="card-body p-4">
+          <form id="searchForm">
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Describe what you're looking for:</label>
+              <textarea class="form-control" id="query" rows="3" placeholder="e.g., Hotel in Goa with pool and WiFi under ₹3000"></textarea>
+            </div>
+            
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Location:</label>
+              <select class="form-select" id="location">
+                <option value="">Any Location</option>
+                <option value="Goa">Goa</option>
+                <option value="Mumbai">Mumbai</option>
+                <option value="Delhi">Delhi</option>
+                <option value="Bangalore">Bangalore</option>
+                <option value="Jaipur">Jaipur</option>
+                <option value="Kerala">Kerala</option>
+                <option value="Manali">Manali</option>
+                <option value="Shimla">Shimla</option>
+                <option value="Udaipur">Udaipur</option>
+                <option value="Pondicherry">Pondicherry</option>
+              </select>
+            </div>
+            
+            <div class="row mb-3">
+              <div class="col-6">
+                <label class="form-label fw-semibold">Max Price:</label>
+                <select class="form-select" id="maxPrice">
+                  <option value="">Any</option>
+                  <option value="2000">Under ₹2,000</option>
+                  <option value="3000">Under ₹3,000</option>
+                  <option value="4000">Under ₹4,000</option>
+                  <option value="5000">Under ₹5,000</option>
+                </select>
+              </div>
+              <div class="col-6">
+                <label class="form-label fw-semibold">Amenities:</label>
+                <select class="form-select" id="amenity">
+                  <option value="">Any</option>
+                  <option value="pool">Pool</option>
+                  <option value="wifi">WiFi</option>
+                  <option value="parking">Parking</option>
+                  <option value="ac">Air Conditioning</option>
+                  <option value="kitchen">Kitchen</option>
+                  <option value="gym">Gym</option>
+                  <option value="spa">Spa</option>
+                  <option value="beach">Beach Access</option>
+                </select>
+              </div>
+            </div>
+            
+            <button type="submit" class="btn btn-search w-100" id="searchBtn">
+              🔍 Search Hotels
+            </button>
+          </form>
+          
+          <!-- Example Searches -->
+          <div class="example-searches">
+            <small class="text-muted fw-semibold">💡 Try these:</small>
+            <div class="example-chips">
+              <span class="example-chip" onclick="fillSearch('Budget hotel in Goa with beach access', 'Goa', '3000', '')">🏖️ Goa beach</span>
+              <span class="example-chip" onclick="fillSearch('Luxury resort in Kerala with pool', 'Kerala', '', 'pool')">🌴 Kerala</span>
+              <span class="example-chip" onclick="fillSearch('Business hotel in Mumbai with WiFi', 'Mumbai', '4000', 'wifi')">🏢 Mumbai</span>
+              <span class="example-chip" onclick="fillSearch('Mountain cabin in Manali', 'Manali', '', '')">🏔️ Manali</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Results -->
+    <div class="col-lg-8">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="fw-bold mb-0">🏨 Search Results</h5>
+        <span class="text-muted" id="resultCount">Enter search criteria</span>
+      </div>
+      
+      <div class="results-container" id="results">
+        <div class="no-results">
+          <div class="icon">🏨</div>
+          <h5>Find Your Perfect Hotel</h5>
+          <p>Use the search form to find hotels matching your requirements</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function fillSearch(query, location, maxPrice, amenity) {
+  document.getElementById('query').value = query;
+  document.getElementById('location').value = location;
+  document.getElementById('maxPrice').value = maxPrice;
+  document.getElementById('amenity').value = amenity;
+}
+
+document.getElementById('searchForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  
+  const searchBtn = document.getElementById('searchBtn');
+  const resultsDiv = document.getElementById('results');
+  const resultCount = document.getElementById('resultCount');
+  
+  searchBtn.disabled = true;
+  searchBtn.innerHTML = '🔍 Searching...';
+  
+  resultsDiv.innerHTML = `
+    <div class="loading">
+      <div class="loading-spinner"></div>
+      <p class="mt-3 text-muted">Searching hotels...</p>
+    </div>
+  `;
+  
+  try {
+    const params = new URLSearchParams();
+    
+    const query = document.getElementById('query').value;
+    const location = document.getElementById('location').value;
+    const maxPrice = document.getElementById('maxPrice').value;
+    const amenity = document.getElementById('amenity').value;
+    
+    if (query) params.append('query', query);
+    if (location) params.append('location', location);
+    if (maxPrice) params.append('maxPrice', maxPrice);
+    if (amenity) params.append('amenity', amenity);
+    
+    const response = await fetch(`/api/hotels/search?${params.toString()}`);
+    const data = await response.json();
+    
+    if (data.error) {
+      resultsDiv.innerHTML = `<div class="alert alert-danger">${data.error}</div>`;
+      resultCount.textContent = 'Error';
+      return;
+    }
+    
+    const hotels = data.hotels || [];
+    resultCount.textContent = `${hotels.length} hotels found`;
+    
+    if (hotels.length === 0) {
+      resultsDiv.innerHTML = `
+        <div class="no-results">
+          <div class="icon">😔</div>
+          <h5>No Hotels Found</h5>
+          <p>Try adjusting your search criteria</p>
+        </div>
+      `;
+      return;
+    }
+    
+    resultsDiv.innerHTML = hotels.map(hotel => `
+      <div class="card hotel-card mb-3">
+        <div class="row g-0">
+          <div class="col-md-4">
+            <img src="${hotel.image}" class="img-fluid h-100 w-100" alt="${hotel.title}" style="object-fit: cover;">
+          </div>
+          <div class="col-md-8">
+            <div class="card-body">
+              <div class="d-flex justify-content-between align-items-start">
+                <div>
+                  <h5 class="card-title fw-bold">${hotel.title}</h5>
+                  <p class="text-muted mb-2">📍 ${hotel.location}, ${hotel.country}</p>
+                </div>
+                <div class="price-tag">₹${hotel.price.toLocaleString('en-IN')}/night</div>
+              </div>
+              <p class="card-text small">${hotel.description ? hotel.description.substring(0, 150) + '...' : 'No description available'}</p>
+              <div class="mb-2">
+                ${(hotel.amenities || []).slice(0, 5).map(a => `<span class="amenity-tag">${a}</span>`).join('')}
+              </div>
+              ${hotel.matchScore ? `<span class="match-score">⭐ ${hotel.matchScore}% match</span>` : ''}
+              <a href="/listings/${hotel._id}" class="btn btn-sm btn-outline-primary float-end">View Details →</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    `).join('');
+    
+  } catch (error) {
+    resultsDiv.innerHTML = `
+      <div class="alert alert-danger">
+        <h5>❌ Error</h5>
+        <p>${error.message}</p>
+      </div>
+    `;
+    resultCount.textContent = 'Error';
+  } finally {
+    searchBtn.disabled = false;
+    searchBtn.innerHTML = '🔍 Search Hotels';
+  }
+});
+</script>
+

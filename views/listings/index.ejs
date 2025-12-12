@@ -1,0 +1,73 @@
+<%#
+===================================================================================
+                    INDEX.EJS - All Listings Page (Home)
+===================================================================================
+
+📚 WHAT IS THIS FILE?
+---------------------
+This is the MAIN LISTINGS PAGE that displays all hotel properties.
+It shows a responsive grid of cards, each representing a hotel listing.
+
+🔗 ROUTE: GET /listings
+   Data passed: { allListings } (array of all listings from MongoDB)
+
+📌 EJS CONCEPTS:
+---------------
+- <% %>: Execute JavaScript (no output)
+- <%= %>: Output escaped HTML (safe from XSS)
+- <%- %>: Output unescaped HTML (use carefully!)
+- <%# %>: Comment (not rendered)
+
+📌 BOOTSTRAP GRID:
+-----------------
+- .row-cols-lg-3: 3 cards per row on large screens
+- .row-cols-md-3: 3 cards per row on medium screens  
+- .row-cols-sm-1: 1 card per row on small screens (mobile)
+
+📌 FOR LOOP:
+-----------
+<% for(let listing of allListings) { %>
+  ... render each card ...
+<% } %>
+
+📖 INTERVIEW TIP:
+----------------
+"I used EJS templating to dynamically render hotel listings from MongoDB.
+The responsive grid uses Bootstrap's row-cols classes to automatically
+adjust the number of cards per row based on screen size. Each card links
+to the detailed show page using the MongoDB ObjectId."
+
+===================================================================================
+%>
+<% layout("layouts/boilerplate") -%>
+<body>
+  <h3>All Listings</h3>
+  
+  <%# Responsive Grid: 3 cols on lg/md, 1 col on sm (mobile) %>
+  <div class="row row-cols-lg-3 row-cols-md-3 row-cols-sm-1">
+  
+  <%# Loop through all listings from database %>
+  <% for(let listing of allListings) { %>
+    <%# Each card links to its detail page using MongoDB _id %>
+    <a href="/listings/<%=listing._id%>" class="listing-link">  
+      <div class="card col">
+        <%# Hotel image with fixed height %>
+        <img src="<%=listing.image%>" class="card-img-top" alt="Listing_Image" style="height: 20rem">
+        
+        <%# Overlay text on hover (styled in CSS) %>
+        <div class="card-img-overlay">Smart Stay</div>
+        
+        <%# Card content: title and price %>
+        <div class="card-body">
+          <p class="card-text">
+            <b><%= listing.title %></b><br>
+            <%# &#8377; = Rupee symbol, toLocaleString formats with commas %>
+            &#8377;<%= listing.price.toLocaleString("en-IN") %> /night
+          </p>
+        </div>
+      </div>
+    </a>
+  <% } %>
+  
+  </div> 
+</body>
