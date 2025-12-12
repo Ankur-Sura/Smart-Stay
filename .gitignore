@@ -185,6 +185,16 @@ GIT_QUICK_REFERENCE.md
 PUSH_INSTRUCTIONS.md
 push-to-github.sh
 
+# Reading order files
+READING_ORDER.md
+**/READING_ORDER.md
+
+# Interview preparation folder
+Interview/
+
+# Documentation folder
+docs/
+
 # =============================================================================
 #                     MISC
 # =============================================================================

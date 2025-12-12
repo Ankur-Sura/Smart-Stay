@@ -59,13 +59,6 @@ A full-stack hotel booking application with integrated AI features for travel pl
 
 6. **Start the application**
    ```bash
-   # Make startup script executable (first time only)
-   chmod +x start.sh
-   
-   # Start all services
-   ./start.sh
-   
-   # Or manually:
    # Terminal 1: Start FastAPI
    cd AI && source venv/bin/activate && python main.py
    
@@ -74,17 +67,6 @@ A full-stack hotel booking application with integrated AI features for travel pl
    ```
 
 **Access the app:** http://localhost:8080
-
----
-
-## 📚 Documentation
-
-| Document | Description |
-|----------|-------------|
-| [QUICK_START.md](docs/QUICK_START.md) | Setup instructions |
-| [RESUME_CONTENT.md](docs/RESUME_CONTENT.md) | Interview talking points |
-| **[Interview/](Interview/)** | **📖 Complete interview prep notes (12 files)** |
-| [Interview/READING_ORDER.md](Interview/READING_ORDER.md) | Start here - reading guide |
 
 ---
 
@@ -142,31 +124,19 @@ Smart Stay/
 │   ├── travel_graph.py # Travel planning workflow
 │   └── solo_trip_graph.py # HITL workflow
 ├── init/               # Database seeding
-├── docs/               # Documentation
-├── Interview/          # 📖 Interview prep notes (12 files)
-│   └── READING_ORDER.md # Start here!
-└── start.sh            # Startup script
+└── models/             # Mongoose schemas
 ```
 
 ---
 
-## 🎯 For Interviews
+## 🏛️ Architecture
 
-**📖 Complete Interview Prep:** See the **[Interview/](Interview/)** folder with 12 detailed notes!
-
-Start with **[Interview/READING_ORDER.md](Interview/READING_ORDER.md)** for the recommended reading order.
-
-**Main concepts to highlight:**
-1. Microservices architecture (Express ↔ FastAPI)
-2. LangGraph multi-node workflows
-3. Human-in-the-Loop (HITL) pattern
-4. RESTful API design
-5. MongoDB with Mongoose
-
-**Quick Resources:**
-- [Interview/InterviewQuestions.txt](Interview/InterviewQuestions.txt) - All Q&A
-- [Interview/LangGraphNotes.txt](Interview/LangGraphNotes.txt) - AI workflows
-- [docs/RESUME_CONTENT.md](docs/RESUME_CONTENT.md) - Resume bullet points
+**Key Concepts:**
+1. **Microservices Architecture** - Express (Node.js) ↔ FastAPI (Python)
+2. **LangGraph Workflows** - Multi-node AI workflows for complex tasks
+3. **Human-in-the-Loop (HITL)** - Interactive AI planning with user feedback
+4. **RESTful API Design** - Clean API endpoints for frontend-backend communication
+5. **MongoDB with Mongoose** - NoSQL database with ODM for data modeling
 
 ---
 
